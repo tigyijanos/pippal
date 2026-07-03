@@ -114,6 +114,45 @@ def test_log_path_for_naming() -> None:
     assert "pro" not in p.name
 
 
+def test_collect_logs_zip_tail_truncation(_isolated_diag: Path) -> None:
+    """collect_logs_zip() caps each log file to the last 10 MB.
+
+    Writes a synthetic log file that is 11 MB (1 MB over the cap).  The
+    zip entry must contain ≤ 10 MB of content and must be the *tail* of
+    the original data (i.e. include the final bytes).
+    """
+    from pippal.diagnostics import _LOG_UPLOAD_MAX_BYTES, collect_logs_zip
+
+    # Build a fake log file: 11 MB of ASCII newline-terminated lines.
+    one_mb = 1024 * 1024
+    line = b"x" * 1023 + b"\n"  # 1024 bytes per line
+    # Total: 11 MB = 11 * 1024 lines
+    total_lines = (11 * one_mb) // len(line)
+    raw = line * total_lines
+
+    log_file = _isolated_diag / "pippal-2099-01-01.log"
+    log_file.write_bytes(raw)
+
+    zip_bytes = collect_logs_zip()
+    assert len(zip_bytes) > 0
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        names = zf.namelist()
+        assert "pippal-2099-01-01.log" in names
+        entry = zf.read("pippal-2099-01-01.log")
+
+    # Uploaded portion must not exceed the cap.
+    assert len(entry) <= _LOG_UPLOAD_MAX_BYTES, (
+        f"Uploaded entry is {len(entry)} bytes, expected ≤ {_LOG_UPLOAD_MAX_BYTES}"
+    )
+    # Must be the tail — the last byte of the original file must match.
+    assert entry[-1:] == raw[-1:], "Uploaded content must end with the tail of the original log"
+    # Must start on a clean newline boundary (no partial lines at the start).
+    assert entry[:1] != b"x" or entry.startswith(line), (
+        "Uploaded content must start at a newline boundary"
+    )
+
+
 def test_no_network_import_in_core_diagnostics_modules() -> None:
     """Core diagnostics modules must not import network/upload libraries.
 

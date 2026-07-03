@@ -441,10 +441,29 @@ def delete_logs() -> int:
     return removed
 
 
+# Maximum bytes taken from the *tail* of each log file when building the
+# upload zip.  Keeps the payload bounded even after long sessions.
+_LOG_UPLOAD_MAX_BYTES: int = 10 * 1024 * 1024  # 10 MB per file
+
+
 def collect_logs_zip() -> bytes:
-    """Return an in-memory zip of all current JSONL log files."""
+    """Return an in-memory zip of all current JSONL log files.
+
+    Each file is capped to its last ``_LOG_UPLOAD_MAX_BYTES`` (10 MB).
+    When a file exceeds the cap the tail is trimmed to the next newline
+    boundary so no partial JSONL record is included.
+    """
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in list_log_files():
-            zf.write(f, arcname=f.name)
+            data = f.read_bytes()
+            if len(data) > _LOG_UPLOAD_MAX_BYTES:
+                # Take trailing 10 MB, then advance past the first (likely
+                # partial) line so the zip starts on a clean record boundary.
+                tail = data[-_LOG_UPLOAD_MAX_BYTES:]
+                newline_pos = tail.find(b"\n")
+                if newline_pos != -1:
+                    tail = tail[newline_pos + 1 :]
+                data = tail
+            zf.writestr(f.name, data)
     return buf.getvalue()

@@ -623,6 +623,7 @@ class TestExcludedPortFallback:
         than returning None.
         """
         import errno
+
         import pippal.command_server as cs
         from pippal.paths import CMD_SERVER_PORT
 
@@ -748,6 +749,7 @@ class TestExcludedPortFallback:
         .cmd_port; second startup reads .cmd_port, probes successfully,
         and would foreground+exit rather than trying to bind."""
         import errno
+
         import pippal.command_server as cs
         from pippal.paths import CMD_SERVER_PORT
 

@@ -120,7 +120,9 @@ from __future__ import annotations
 
 import math
 import os
+import socket
 import struct
+import sys
 import wave
 from pathlib import Path
 
@@ -219,67 +221,70 @@ def realwav_engine(backend):
 
 
 # ===========================================================================
-# UC-E9 — single-instance gate (app_web.py:208-221)
+# UC-E9 — single-instance gate (connect-first probe + bind-with-fallback)
 # ===========================================================================
 #
-# GENUINELY COVERED (real-effect, no overclaim) after the production fix
-# in command_server.py. The documented single-instance gate is
+# GENUINELY COVERED (real-effect, no overclaim) under the CURRENT single-
+# instance model in ``command_server.py`` / ``app_web.main``. The excluded-
+# port fix (already on main) DELIBERATELY moved the single-instance refusal
+# from the BIND layer to a CONNECT-FIRST probe:
 #
-#     cmd_server = start_command_server(engine, commands=...)
-#     if cmd_server is None:        # could not bind the IPC port
-#         <MessageBoxW>             # "PipPal is already running"
-#         raise SystemExit(0)
+#     _candidate_port = resolve_candidate_port()    # env -> .cmd_port -> 51677
+#     if probe_running_instance(_candidate_port):   # a live instance answers /ping
+#         _signal_running_instance_to_show(...)      # foreground the existing window
+#         raise SystemExit(0)                        # ... and exit (no 2nd window)
+#     cmd_server = start_command_server(...)         # else bind (free-port fallback)
 #
-# (app_web.py:207-221, identically pippal.app.py:422-431). It relies on
-# a *second* instance failing to bind the already-bound IPC port.
+# (``app_web.py:301-344``.) Why it changed: the fixed IPC port (51677) can
+# sit inside an OS-excluded TCP range (Hyper-V / WSL2 / Docker reservations,
+# ``WinError 10013``), so a plain ``bind()`` can fail for a LEGITIMATE first
+# launch. A bind failure therefore no longer means "already running":
+# ``start_command_server`` now FALLS BACK to an OS-assigned free port (and
+# persists it to ``.cmd_port``) instead of returning ``None``, so the app
+# still launches where the default port is excluded. The genuine "is another
+# instance already here?" decision is the connect-first ``/ping`` probe, NOT a
+# failed bind. (This is why the old bind-layer "second start_command_server
+# returns None" assertion is intentionally gone — it is not a regression to
+# undo; the fallback is the whole point of the excluded-port fix.)
 #
-# This WAS a verified latent product weakness on Windows: the stdlib
-# ``http.server.HTTPServer`` sets ``allow_reuse_address = True`` and
-# Windows ``SO_REUSEADDR`` let two sockets bind the SAME
-# ``127.0.0.1:port`` concurrently, so the gate never fired for two
-# genuine instances. The production fix (``command_server.py``
-# ``_SingleInstanceHTTPServer``: on Windows force
-# ``allow_reuse_address=False`` and set ``SO_EXCLUSIVEADDRUSE`` on the
-# listening socket before ``bind()``) makes a real second bind to an
-# already-held PipPal port genuinely fail for EVERY caller
-# (privilege-independent), while the first instance serves normally and
-# a fresh instance can still bind after the previous one exits
-# (``SO_EXCLUSIVEADDRUSE`` conflicts only with currently-open sockets,
-# never ``TIME_WAIT`` — crash-restart safe).
-#
-# The test below asserts the REAL effect end-to-end, no mock of the
-# unit under test, induced at a true seam (actually starting a first
-# real server on this test's hermetic ephemeral port, exactly the
-# ``cmd_server_identity`` opt-in production also uses for the fixed
-# port):
-#   (1) a real first ``start_command_server`` succeeds and SERVES
-#       (its ``/ping`` answers 200);
-#   (2) a real SECOND ``start_command_server`` targeting the SAME
-#       now-occupied port genuinely returns ``None``
-#       (``command_server.py`` ``except OSError: return None``) — the
-#       genuine single-instance refusal, for any caller;
-#   (3) the **verbatim** ``app_web.main`` ``if cmd_server is None:
-#       raise SystemExit(0)`` guard genuinely raises the real
-#       ``SystemExit(0)`` for the second instance while the FIRST
-#       instance still answers ``/ping`` (it keeps serving) — only the
-#       native ``MessageBoxW`` OS call is skipped (testing Windows, not
-#       PipPal);
-#   (4) crash-restart safety: after the first instance is gone, a
-#       FRESH real ``start_command_server`` on the SAME port succeeds
-#       and serves (the fix is not a permanent port lock).
-# UC-E9 is therefore now **genuinely covered**, no fake-green: the
-# refusal asserted is the real, now-true product behaviour.
+# The tests below assert the REAL effect of THIS model end-to-end, no mock of
+# the unit under test, induced at true seams on this test's hermetic ephemeral
+# port (the ``cmd_server_identity`` opt-in: ``PIPPAL_CMD_SERVER_PORT=0`` -> an
+# OS-assigned free port, written back and persisted to ``.cmd_port``). The
+# hermetic per-test token is cleared for these tests because the production
+# connect-first probe is tokenless (production never sets
+# ``PIPPAL_CMD_SERVER_TOKEN``); the ephemeral per-test port keeps the test
+# fully isolated regardless:
+#   (1) a real FIRST ``start_command_server`` succeeds, SERVES (``/ping`` ->
+#       200) and persists its port, so ``resolve_candidate_port`` +
+#       ``probe_running_instance`` genuinely detect the live instance;
+#   (2) a SECOND launch running the VERBATIM connect-first gate detects that
+#       live instance, signals IT to foreground (a real ``POST /settings``
+#       that fires on the FIRST server) and raises the real ``SystemExit(0)``
+#       WITHOUT ever binding a second server — the genuine single-instance
+#       refusal (no duplicate window), the first instance still serving;
+#   (3) crash-restart safety: after the first instance is gone its recorded
+#       ``.cmd_port`` is stale, ``probe_running_instance`` returns ``False`` (a
+#       crashed instance is NOT mistaken for a live one) and a FRESH
+#       ``start_command_server`` binds & serves again — the app restarts;
+#   (4) (separate test) excluded-port fallback: when the candidate port is
+#       genuinely unbindable and nothing live answers, ``start_command_server``
+#       does NOT return ``None`` ("already running") — it falls back to a free
+#       port, serves and persists it, so a legitimate first launch survives an
+#       excluded default port.
+# UC-E9 is therefore genuinely covered against the CURRENT mechanism: the
+# refusal asserted is the real connect-first probe refusal, and the fallback
+# asserted is the real, now-required excluded-port behaviour.
 
 
 def _ping(port: int, token: str | None = None, timeout: float = 2.0) -> int | None:
-    """Real HTTP GET /ping against a live command server; the real
-    status (200) or None if it does not answer. No mock.
+    """Real HTTP GET /ping against a live command server; the real status
+    (200) or None if it does not answer. No mock.
 
-    The hermetic ``cmd_server_identity`` sets ``PIPPAL_CMD_SERVER_TOKEN``,
-    so the real server REQUIRES the matching ``X-PipPal-Token`` header
-    (else it 404s by design); the real production ``open_file`` client
-    sends exactly this header, so a token-carrying ``/ping`` is the
-    genuine "is a real PipPal instance serving here" probe."""
+    A token is sent only when given; with the hermetic token cleared (as the
+    UC-E9 tests do, mirroring the tokenless production connect-first probe) a
+    bare ``/ping`` is the genuine "is a real PipPal instance serving here"
+    probe."""
     import urllib.error
     import urllib.request
 
@@ -299,8 +304,8 @@ def _ping(port: int, token: str | None = None, timeout: float = 2.0) -> int | No
 
 
 def _poll_until(predicate, timeout_s: float = 8.0, every_s: float = 0.05):
-    """Deadline-poll (no fixed sleep): returns predicate()'s last value
-    once truthy or once the deadline passes."""
+    """Deadline-poll (no fixed sleep): returns predicate()'s last value once
+    truthy or once the deadline passes."""
     import time
 
     deadline = time.monotonic() + timeout_s
@@ -311,198 +316,344 @@ def _poll_until(predicate, timeout_s: float = 8.0, every_s: float = 0.05):
     return val
 
 
+def _signal_running_instance_to_show(port: int, timeout: float = 3.0) -> bool:
+    """The verbatim production second-launch foreground signal
+    (``app_web._signal_running_instance_to_show``): POST /settings to the
+    already-running instance's IPC so it raises/foregrounds its window.
+    Returns True iff HTTP 2xx.
+
+    Inlined (not imported) to keep ``app_web``'s pywebview/pystray import
+    graph out of the headless e2e harness — exactly as the verbatim
+    ``app_web.main`` guard is inlined elsewhere in this file."""
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/settings", data=b"", method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return 200 <= getattr(resp, "status", 200) < 300
+    except Exception:
+        return False
+
+
+def _hold_port_exclusive():
+    """Hold a real 127.0.0.1 port so a subsequent ``start_command_server``
+    bind to it genuinely fails — the true OS condition an excluded-port range
+    (``WinError 10013``) produces. On Windows the holder takes
+    ``SO_EXCLUSIVEADDRUSE`` (mirroring ``_SingleInstanceHTTPServer``) so the
+    conflict is unconditional; elsewhere a plain bound+listening socket
+    already refuses a second bind. The holder deliberately does NOT speak
+    HTTP, so ``probe_running_instance`` sees nothing live there."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if sys.platform == "win32":
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    s.bind(("127.0.0.1", 0))
+    s.listen(1)
+    return s, s.getsockname()[1]
+
+
 def test_single_instance_gate_refuses_second_instance_and_is_crash_restart_safe(
     backend, cmd_server_identity, step
 ):
-    """UC-E9 — genuine real-effect coverage of the single-instance gate
-    after the production fix in ``command_server.py``.
+    """UC-E9 — genuine real-effect coverage of the single-instance gate under
+    the CURRENT connect-first / bind-with-fallback model in
+    ``command_server.py`` / ``app_web.main``.
 
-    No mock of the unit under test. The real ``start_command_server``
-    (now backed by ``_SingleInstanceHTTPServer``) is started for real on
-    this test's hermetic ephemeral per-test port (``cmd_server_identity``
-    — ``PIPPAL_CMD_SERVER_PORT=0`` → an OS-assigned free port written
-    back; the exact opt-in production uses for the fixed port). All
-    asserted effects are real and privilege/host-independent: a
-    ``SO_EXCLUSIVEADDRUSE`` bind conflict is refused identically for
-    non-admin / admin / LocalSystem and nothing host-global is touched
-    (the port is ephemeral and per-test).
+    No mock of the unit under test. A real first ``start_command_server`` is
+    started for real on this test's hermetic ephemeral per-test port
+    (``cmd_server_identity`` — ``PIPPAL_CMD_SERVER_PORT=0`` -> an OS-assigned
+    free port written back and persisted to ``.cmd_port``). The hermetic
+    per-test token is cleared because the production connect-first probe is
+    tokenless; the ephemeral port keeps the test isolated.
 
     Asserted REAL effects:
 
-    1. a real FIRST ``start_command_server`` succeeds and SERVES — its
-       real ``/ping`` answers 200;
-    2. a real SECOND ``start_command_server`` targeting the SAME
-       now-occupied port genuinely returns ``None`` — the genuine
-       single-instance refusal (the fix made this true on Windows);
-    3. the **verbatim** ``app_web.main`` ``if cmd_server is None: raise
-       SystemExit(0)`` guard genuinely raises the real ``SystemExit(0)``
-       for the second instance, while the FIRST instance is still
-       serving (its ``/ping`` still answers 200) — only the native
-       ``MessageBoxW`` OS call is skipped (testing Windows, not PipPal);
-    4. crash-restart safety — after the first instance is gone, a FRESH
-       real ``start_command_server`` on the SAME port succeeds and
-       serves (the fix is not a permanent port lock; it is not a
-       fake-green where a dead port stays unusable)."""
-    from pippal.command_server import start_command_server
+    1. a real FIRST ``start_command_server`` succeeds, SERVES (real ``/ping``
+       -> 200) and publishes its port, so ``resolve_candidate_port`` +
+       ``probe_running_instance`` genuinely detect the live instance;
+    2. a SECOND launch running the VERBATIM connect-first gate
+       (``app_web.py:307-313``) detects the live instance, signals IT to
+       foreground (a real ``POST /settings`` that fires on the FIRST server)
+       and raises the real ``SystemExit(0)`` WITHOUT ever binding a second
+       server — the genuine single-instance refusal (no duplicate window),
+       the first instance still serving;
+    3. crash-restart safety — after the first instance is gone its recorded
+       ``.cmd_port`` is stale, ``probe_running_instance`` returns ``False`` (a
+       crashed instance is NOT mistaken for a live one) and a FRESH
+       ``start_command_server`` binds & serves again."""
+    from pippal.command_server import (
+        probe_running_instance,
+        resolve_candidate_port,
+        start_command_server,
+    )
 
     engine = backend["engine"]
-    # The hermetic per-test token (cmd_server_identity); the real server
-    # requires it on every request, exactly as the real open_file client
-    # sends it — so a token-carrying /ping is the genuine probe.
-    token = cmd_server_identity["token"]
 
-    # ---- (1) A real FIRST instance binds the hermetic ephemeral port
-    #      and genuinely serves.
-    step("first real start_command_server() on the hermetic ephemeral "
-         "port (the real production function)")
-    first = start_command_server(engine)
-    assert first is not None, (
-        "first command server could not bind its ephemeral port — the "
-        "hermetic harness is not isolating this test"
-    )
+    # The connect-first gate probes GET /ping WITHOUT a token (production never
+    # sets PIPPAL_CMD_SERVER_TOKEN); clear the hermetic per-test token so
+    # probe_running_instance runs exactly as production does. The ephemeral
+    # port (cmd_server_identity, PIPPAL_CMD_SERVER_PORT=0) still isolates us.
+    prev_token = os.environ.pop("PIPPAL_CMD_SERVER_TOKEN", None)
+
+    first = None
     fresh = None
     try:
+        # ---- (1) A real FIRST instance binds the hermetic ephemeral port,
+        #      persists it to .cmd_port and genuinely serves. control_routes_
+        #      enabled=True so a second launch's POST /settings foreground
+        #      signal can reach it (exactly as app_web.main wires it).
+        settings_signals = {"n": 0}
+        commands = {
+            "settings": lambda: settings_signals.__setitem__(
+                "n", settings_signals["n"] + 1
+            )
+        }
+        step("first real start_command_server() on the hermetic ephemeral "
+             "port (the real production function, control routes on)")
+        first = start_command_server(
+            engine, commands=commands, control_routes_enabled=True
+        )
+        assert first is not None, (
+            "first command server could not bind its ephemeral port — the "
+            "hermetic harness is not isolating this test"
+        )
         bound_port = first.server_address[1]
         assert bound_port != 51677, (
-            "ephemeral bind unexpectedly landed on the fixed prod port "
-            "— the hermetic harness is not isolating this test"
+            "ephemeral bind unexpectedly landed on the fixed prod port — the "
+            "hermetic harness is not isolating this test"
         )
-        assert _poll_until(lambda: _ping(bound_port, token) == 200), (
-            f"the real first instance never answered /ping on its bound "
-            f"port {bound_port} — it is not actually serving"
+        assert _poll_until(lambda: _ping(bound_port) == 200), (
+            f"the real first instance never answered /ping on its bound port "
+            f"{bound_port} — it is not actually serving"
         )
         step.check(
-            f"first instance LIVE & serving on hermetic port "
-            f"{bound_port} (real GET /ping → 200)"
+            f"first instance LIVE & serving on hermetic port {bound_port} "
+            f"(real GET /ping -> 200)"
         )
 
-        # ---- (2) A real SECOND instance targeting the SAME now-occupied
-        #      port. The cmd_server_identity fixture left
-        #      PIPPAL_CMD_SERVER_PORT=0; pin it to the exact bound port so
-        #      the second start_command_server attempts the SAME port a
-        #      genuine 2nd PipPal launch would, then assert the real None.
-        prev_env = os.environ.get("PIPPAL_CMD_SERVER_PORT")
-        os.environ["PIPPAL_CMD_SERVER_PORT"] = str(bound_port)
-        step("second real start_command_server() targeting the SAME "
-             "now-occupied port (exactly what a real 2nd instance does)")
-        try:
-            second = start_command_server(engine)
-            # The REAL, now-true product behaviour after the fix:
-            # SO_EXCLUSIVEADDRUSE makes the second bind genuinely fail
-            # → the real `except OSError: return None` path runs.
-            assert second is None, (
-                f"UNEXPECTED: the second start_command_server did NOT "
-                f"return None for the already-held port {bound_port} "
-                f"(got {second!r}). The single-instance gate's "
-                f"trigger-condition is broken — the production "
-                f"_SingleInstanceHTTPServer fix is not in effect."
-            )
-            step.check(
-                "second start_command_server() on the already-held "
-                "PipPal port genuinely returned None — the real "
-                "single-instance refusal (command_server.py "
-                "_SingleInstanceHTTPServer + except OSError → None)"
-            )
+        # The running instance published its port; the connect-first resolver
+        # (env -> .cmd_port -> default) now points at it and the tokenless
+        # probe genuinely detects the live instance — the real inputs the
+        # second-launch gate consumes.
+        assert resolve_candidate_port() == bound_port, (
+            "the running instance did not publish its port for the connect-"
+            "first resolver (env / .cmd_port) — a 2nd launch could not find it"
+        )
+        assert probe_running_instance(bound_port) is True, (
+            "probe_running_instance did not detect the live first instance on "
+            "its own bound port — the connect-first gate is blind"
+        )
+        step.check(
+            "connect-first resolver + tokenless /ping probe genuinely detect "
+            "the LIVE first instance (resolve_candidate_port + "
+            "probe_running_instance)"
+        )
 
-            # ---- (3) The VERBATIM app_web.main single-instance guard
-            #      around that real None. Only the native MessageBoxW
-            #      (not PipPal code) is skipped; the real documented
-            #      control-flow effect — the second instance exits
-            #      cleanly instead of running a duplicate engine/tray —
-            #      is asserted for real.
-            cmd_server = second  # the real None from the real refused bind
-            with pytest.raises(SystemExit) as exc:
-                if cmd_server is None:
-                    # app_web.py:209-220 wraps MessageBoxW in try/except
-                    # and ALWAYS raises SystemExit(0) next; the box is
-                    # the OS boundary, the SystemExit is the real effect.
-                    raise SystemExit(0)
-            assert exc.value.code == 0, (
-                f"the documented single-instance exit must be "
-                f"SystemExit(0); got code {exc.value.code!r}"
+        # ---- (2) A SECOND launch runs the VERBATIM connect-first gate
+        #      (app_web.py:307-313). It must detect the live instance, signal
+        #      IT to foreground, and exit WITHOUT binding a second server —
+        #      the genuine single-instance refusal (no duplicate window).
+        step("second launch runs the verbatim connect-first single-instance "
+             "gate (app_web.py:307-313) against the live first instance")
+        bound_second_server = []
+        with pytest.raises(SystemExit) as exc:
+            _candidate_port = resolve_candidate_port()
+            if probe_running_instance(_candidate_port):
+                # app_web.main: foreground the running window, then exit 0 —
+                # WITHOUT ever binding a second command server.
+                _signal_running_instance_to_show(_candidate_port)
+                raise SystemExit(0)
+            # Unreached for a live instance; a genuine FIRST launch would bind
+            # its own server here. Recorded so we can prove it never ran.
+            bound_second_server.append(
+                start_command_server(
+                    engine, commands=commands, control_routes_enabled=True
+                )
             )
-            step.check(
-                "the verbatim app_web.main `if cmd_server is None: raise "
-                "SystemExit(0)` guard (app_web.py:208-221) genuinely "
-                "raised the real SystemExit(0) for the second instance "
-                "(only the native MessageBoxW OS call skipped)"
-            )
+        assert exc.value.code == 0, (
+            f"the connect-first single-instance exit must be SystemExit(0); "
+            f"got code {exc.value.code!r}"
+        )
+        assert bound_second_server == [], (
+            "the second launch bound its OWN command server instead of "
+            "detecting the live instance and exiting — a duplicate instance "
+            "(second window) would result; the single-instance gate is broken"
+        )
+        assert settings_signals["n"] >= 1, (
+            "the second launch did not signal the running instance to "
+            "foreground (POST /settings never fired on the first server) — the "
+            "connect-first gate did not reach the live first instance"
+        )
+        step.check(
+            "second launch detected the live instance, foregrounded it (real "
+            "POST /settings fired on the FIRST server) and raised the real "
+            "SystemExit(0) WITHOUT binding a second server — no duplicate "
+            "window (the genuine single-instance refusal)"
+        )
 
-            # The FIRST instance must STILL be serving (the gate refuses
-            # the *second*; it must not have disturbed the first).
-            assert _ping(bound_port, token) == 200, (
-                "the FIRST instance stopped answering /ping after the "
-                "second was refused — the gate must refuse the second "
-                "WITHOUT disturbing the first"
-            )
-            step.check(
-                "the FIRST instance is still serving (real GET /ping → "
-                "200) after the second was refused & exited 0 — the gate "
-                "refuses only the duplicate"
-            )
-        finally:
-            if prev_env is None:
-                os.environ.pop("PIPPAL_CMD_SERVER_PORT", None)
-            else:
-                os.environ["PIPPAL_CMD_SERVER_PORT"] = prev_env
+        # The FIRST instance must be undisturbed and still serving.
+        assert _ping(bound_port) == 200, (
+            "the FIRST instance stopped answering /ping after the second was "
+            "refused — the gate must refuse the second WITHOUT disturbing the "
+            "first"
+        )
+        step.check(
+            "the FIRST instance is still serving (real GET /ping -> 200) after "
+            "the second launch was refused & exited 0"
+        )
 
-        # ---- (4) Crash-restart safety: the first instance goes away
-        #      (server_close — the OS socket is gone, exactly as on a
-        #      process exit/crash). A FRESH real start_command_server on
-        #      the SAME port must succeed and serve — SO_EXCLUSIVEADDRUSE
-        #      conflicts only with currently-open sockets, never
-        #      TIME_WAIT, so a dead port is genuinely reusable (not a
-        #      permanent lock / fake-green).
-        step("first instance exits (server_close — the OS socket is "
-             "gone, as on a real process crash/exit)")
+        # ---- (3) Crash-restart safety. The first instance goes away
+        #      (server_close — its OS socket is gone, exactly as on a process
+        #      crash/exit). Its recorded .cmd_port is now STALE; nothing
+        #      answers it, so the connect-first probe must return False (a
+        #      crashed instance is NOT mistaken for a live one) and a FRESH
+        #      start_command_server must bind & serve again.
+        step("first instance exits (server_close — the OS socket is gone, as "
+             "on a real process crash/exit)")
         first.shutdown()
         first.server_close()
         assert _poll_until(
-            lambda: _ping(bound_port, token) is None, timeout_s=5.0
+            lambda: _ping(bound_port) is None, timeout_s=5.0
         ), (
             f"the first instance's port {bound_port} still answered after "
-            f"shutdown — cannot prove the crash-restart rebind cleanly"
+            f"shutdown — cannot prove the crash-restart path"
         )
-
-        prev_env2 = os.environ.get("PIPPAL_CMD_SERVER_PORT")
-        os.environ["PIPPAL_CMD_SERVER_PORT"] = str(bound_port)
-        step("FRESH real start_command_server() on the SAME port after "
-             "the previous instance is gone (crash-restart)")
-        try:
-            fresh = start_command_server(engine)
-            assert fresh is not None, (
-                f"a fresh start_command_server could NOT rebind port "
-                f"{bound_port} after the previous instance exited — the "
-                f"SO_EXCLUSIVEADDRUSE fix wrongly permanently locked the "
-                f"port (crash-restart regression)"
-            )
-            assert _poll_until(lambda: _ping(bound_port, token) == 200), (
-                "the fresh instance bound but never served /ping after "
-                "the previous one exited"
-            )
-            step.check(
-                "a FRESH instance rebinds the SAME port after the "
-                "previous one exited and genuinely serves (real GET "
-                "/ping → 200) — the fix is crash-restart safe, not a "
-                "permanent port lock"
-            )
-        finally:
-            if prev_env2 is None:
-                os.environ.pop("PIPPAL_CMD_SERVER_PORT", None)
-            else:
-                os.environ["PIPPAL_CMD_SERVER_PORT"] = prev_env2
+        # The stale .cmd_port still names the dead port; the connect-first gate
+        # must NOT mistake a crashed instance for a live one (else it would
+        # wrongly refuse the restart and the user could never reopen).
+        assert resolve_candidate_port() == bound_port, (
+            "precondition: the crashed instance's stale recorded port should "
+            "still be what the resolver returns (a stale .cmd_port)"
+        )
+        assert probe_running_instance(bound_port) is False, (
+            "a crashed instance's stale recorded port still answered the probe "
+            "— the gate would wrongly refuse a legitimate restart"
+        )
+        step.check(
+            "after the crash the stale recorded port no longer answers the "
+            "probe — the connect-first gate would NOT refuse a restart"
+        )
+        step("FRESH real start_command_server() after the previous instance "
+             "crashed (crash-restart)")
+        fresh = start_command_server(
+            engine, commands=commands, control_routes_enabled=True
+        )
+        assert fresh is not None, (
+            "a fresh start_command_server could NOT start after the previous "
+            "instance crashed — the app cannot restart (crash-restart "
+            "regression)"
+        )
+        fresh_port = fresh.server_address[1]
+        assert _poll_until(lambda: _ping(fresh_port) == 200), (
+            "the fresh instance bound but never served /ping after the "
+            "previous one crashed"
+        )
+        step.check(
+            "a FRESH instance starts and serves (real GET /ping -> 200) after "
+            "the previous one crashed — the single-instance model is crash-"
+            "restart safe, not a permanent lock"
+        )
     finally:
-        if fresh is not None:
+        for srv in (fresh, first):
+            if srv is not None:
+                try:
+                    srv.shutdown()
+                    srv.server_close()
+                except Exception:
+                    pass
+        if prev_token is not None:
+            os.environ["PIPPAL_CMD_SERVER_TOKEN"] = prev_token
+
+
+def test_excluded_default_port_falls_back_to_free_port_not_false_refusal(
+    backend, cmd_server_identity, step
+):
+    """UC-E9 (excluded-port fallback) — the other half of the current single-
+    instance model. When the candidate IPC port is genuinely unbindable (an
+    OS-excluded Hyper-V/WSL2/Docker range, ``WinError 10013``) and NO live
+    instance answers there, ``start_command_server`` must NOT mistake the bind
+    failure for "already running" (the OLD ``None`` return). It must fall back
+    to a free OS-assigned port, serve, and persist that port to ``.cmd_port``
+    so the next startup's connect-first probe finds it — otherwise a
+    legitimate first launch on an excluded default port could never start.
+
+    Real-effect, no mock of the unit under test: the unbindable condition is
+    induced at a true seam by actually holding the port with a real
+    ``SO_EXCLUSIVEADDRUSE`` listener (the same OS refusal an excluded range
+    produces); the real ``start_command_server`` then takes its real
+    bind-with-fallback path."""
+    from pippal.command_server import (
+        probe_running_instance,
+        read_cmd_port_file,
+        start_command_server,
+    )
+
+    engine = backend["engine"]
+    # Tokenless, exactly like production's connect-first / bind path.
+    prev_token = os.environ.pop("PIPPAL_CMD_SERVER_TOKEN", None)
+
+    blocker = None
+    server = None
+    try:
+        blocker, blocked_port = _hold_port_exclusive()
+        # Nothing PipPal is live on that port — only a raw holder that does not
+        # speak HTTP, so the connect-first probe sees no live instance (this is
+        # a legitimate first launch onto an excluded port, NOT a 2nd instance).
+        assert probe_running_instance(blocked_port, timeout=0.4) is False, (
+            "the raw port holder unexpectedly answered the /ping probe — the "
+            "fallback scenario would be confused with 'already running'"
+        )
+        # Point start_command_server at that genuinely-unbindable port, as the
+        # production default would be inside an excluded range.
+        os.environ["PIPPAL_CMD_SERVER_PORT"] = str(blocked_port)
+        step("start_command_server() targeting a genuinely UNBINDABLE "
+             "candidate port with no live instance (excluded-port range)")
+        server = start_command_server(
+            engine, commands={}, control_routes_enabled=True
+        )
+        assert server is not None, (
+            f"start_command_server returned None for an unbindable candidate "
+            f"port {blocked_port} — it wrongly treated an excluded port as "
+            f"'already running' and a legitimate first launch would never "
+            f"start (the excluded-port fallback is not in effect)"
+        )
+        actual_port = server.server_address[1]
+        assert actual_port != blocked_port, (
+            "the fallback did not move off the unbindable port"
+        )
+        assert _poll_until(lambda: _ping(actual_port) == 200), (
+            f"the fallback instance bound port {actual_port} but never served "
+            f"/ping"
+        )
+        # The fallback port is persisted so the NEXT startup's connect-first
+        # probe targets the right address (env writeback for an explicit env
+        # override; .cmd_port for production-mode persistence).
+        assert read_cmd_port_file() == actual_port, (
+            "the fallback port was not persisted to .cmd_port — the next "
+            "startup's connect-first probe could not find this instance"
+        )
+        step.check(
+            f"excluded default port {blocked_port} -> real bind-with-fallback "
+            f"to free port {actual_port}, serves (/ping -> 200) and persists "
+            f".cmd_port — a legitimate first launch survives an excluded "
+            f"default port (no false 'already running')"
+        )
+    finally:
+        if server is not None:
             try:
-                fresh.shutdown()
-                fresh.server_close()
+                server.shutdown()
+                server.server_close()
             except Exception:
                 pass
-        try:
-            first.shutdown()
-            first.server_close()
-        except Exception:
-            pass
+        if blocker is not None:
+            try:
+                blocker.close()
+            except Exception:
+                pass
+        if prev_token is not None:
+            os.environ["PIPPAL_CMD_SERVER_TOKEN"] = prev_token
 
 
 # ===========================================================================

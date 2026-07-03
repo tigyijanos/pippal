@@ -8,8 +8,11 @@
  * Asserts:
  *  - URL constants (STORE_URL, REDDIT_URL) are defined in settings.js
  *  - The banner element is created with data-testid="settings-promo"
- *  - Both buttons carry their testids (promo-get-pro, promo-reddit)
- *  - The correct URLs are associated with each button
+ *  - The Pro upsell button carries its testid (promo-get-pro)
+ *  - The promo banner does NOT include a promo-reddit button (the Reddit
+ *    community link lives in the About card, not the promo banner, to
+ *    avoid showing it twice — fix/reddit-dedup-and-diag-cap)
+ *  - The correct Store URL is associated with the Pro button
  *  - The promo banner is appended BEFORE the Voice card
  *    (view.appendChild(promoCard) appears before view.appendChild(voiceCard))
  *  - CSS classes for the promo banner exist in surfaces.css
@@ -43,11 +46,11 @@ function assert(condition, label) {
 
 // (1) URL constants defined
 assert(settingsSrc.includes('STORE_URL'),  '(1) STORE_URL constant defined');
-assert(settingsSrc.includes('REDDIT_URL'), '(1) REDDIT_URL constant defined');
+assert(settingsSrc.includes('REDDIT_URL'), '(1) REDDIT_URL constant defined (kept as reference, not rendered in banner)');
 assert(settingsSrc.includes('https://apps.microsoft.com/detail/9p0jx4n42nsl'),
   '(1) STORE_URL has correct Microsoft Store value');
 assert(settingsSrc.includes('https://www.reddit.com/r/PipPalApp/'),
-  '(1) REDDIT_URL has correct Reddit value');
+  '(1) REDDIT_URL constant has correct Reddit value');
 
 // (2) Banner element testid
 assert(
@@ -55,21 +58,19 @@ assert(
   '(2) settings-promo testid present'
 );
 
-// (3) Button testids
+// (3) Pro button testid is present; Reddit button is absent (de-duplicated to About card)
 assert(
   settingsSrc.includes('promo-get-pro'),
   '(3) promo-get-pro button testid present'
 );
 assert(
-  settingsSrc.includes('promo-reddit'),
-  '(3) promo-reddit button testid present'
+  !settingsSrc.includes('promo-reddit'),
+  '(3) promo-reddit button NOT in promo banner (Reddit link lives in About card instead)'
 );
 
-// (4) open_url calls referencing both URL constants
+// (4) open_url call referencing Store URL constant
 const storeCallIdx = settingsSrc.indexOf('STORE_URL');
-const redditCallIdx = settingsSrc.indexOf('REDDIT_URL');
 assert(storeCallIdx !== -1, '(4) STORE_URL referenced in settings.js');
-assert(redditCallIdx !== -1, '(4) REDDIT_URL referenced in settings.js');
 
 // (5) Promo banner appended BEFORE voice card (order check by string position)
 const promoAppendIdx = settingsSrc.indexOf('appendChild(promoCard)');

@@ -327,7 +327,15 @@ def main() -> None:
     # return None due to an excluded-port error.  The actually-bound port is
     # persisted to .cmd_port so the next startup's connect-first probe finds
     # it.  None is only returned if even the free-port bind fails (rare).
-    cmd_server = start_command_server(engine, commands=command_callbacks)
+    #
+    # control_routes_enabled=True is required so that a second-launch's
+    # _signal_running_instance_to_show() can POST /settings and trigger
+    # windows.raise_window("settings").  Without this flag POST /settings
+    # returns 404 and the foreground signal silently fails.  All control
+    # routes are bound to 127.0.0.1 only so local-only exposure is correct.
+    cmd_server = start_command_server(
+        engine, commands=command_callbacks, control_routes_enabled=True
+    )
     if cmd_server is None:
         # Belt-and-suspenders: if we still can't bind any port, try to
         # activate whatever might be running (could be a race) and exit.
