@@ -164,6 +164,20 @@ class PipPalBridge(DiagSettingsBridgeMixin):
 
         result: dict[str, Any] = {"ok": True, "config": dict(self.config)}
 
+        # Re-activate the resolved UI language so on-demand Python surfaces
+        # (toasts, native titles) render in the new language immediately, and
+        # so any web window opened/reloaded next boots in it (T-107; design
+        # §5.5 — the tray menu, built once at startup, stays restart-required).
+        # ``language_resolved`` is echoed back so the frontend knows the
+        # concrete tag a reload will boot in.
+        try:
+            from ..i18n import get_language, set_language
+
+            set_language(candidate.get("language", ""))
+            result["language_resolved"] = get_language()
+        except Exception:
+            pass
+
         hotkeys_changed = any(prev_hotkeys.get(k, "") != candidate.get(k, "") for k in hotkey_keys)
         if hotkeys_changed and self._on_hotkey_change is not None:
             try:

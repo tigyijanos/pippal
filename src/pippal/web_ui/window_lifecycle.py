@@ -96,9 +96,42 @@ def _window_title(spec: dict[str, Any]) -> str:
     return rendered
 
 
+def _resolved_lang() -> str:
+    """Return the active UI language tag, or ``""`` when i18n is unavailable.
+
+    The import is deliberately lazy + absolute (never a top-level relative
+    import) so this module stays loadable via ``windows.py``'s file-path
+    loader, which imports it with a synthetic name and NO package context —
+    the same discipline :func:`_window_title` follows.
+    """
+    try:
+        from pippal.i18n import get_language
+
+        return get_language() or ""
+    except Exception:
+        return ""
+
+
+def _surface_url(base_url: str, surface: str) -> str:
+    """Build the load URL for *surface*, carrying the resolved language.
+
+    ``?lang=<resolved>`` is appended so every web window (settings, voices,
+    overlay, notices, onboarding) boots in the language the Python side
+    resolved at startup (``set_language`` from ``config.language``), instead
+    of the browser's ``navigator.language`` (T-107). The JS ``?lang=`` seam
+    already beats ``navigator.language`` in ``i18n.js`` resolution, so no host
+    catalog injection is needed — the served catalog is fetched for that tag.
+    """
+    url = f"{base_url}/index.html?view={surface}"
+    lang = _resolved_lang()
+    if lang:
+        url += f"&lang={lang}"
+    return url
+
+
 def make_window(mgr: Any, surface: str, *, hidden: bool = False) -> Any:
     spec = _SURFACES.get(surface, _SURFACES["settings"])
-    url = f"{mgr._base_url}/index.html?view={surface}"
+    url = _surface_url(mgr._base_url, surface)
     position = mgr._window_position(surface, spec)
     kwargs: dict[str, Any] = {
         "title": _window_title(spec),
