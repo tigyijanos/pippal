@@ -1,0 +1,10 @@
+{
+  "_meta": { "lang": "en", "name": "English", "fallback": "en" },
+  "chrome.close": "Close",
+  "footer.reset": "Reset to defaults",
+  "footer.cancel": "Cancel",
+  "footer.apply": "Apply",
+  "footer.save": "Save",
+  "confirm.no": "No",
+  "confirm.yes": "Yes"
+}
