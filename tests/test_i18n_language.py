@@ -16,7 +16,10 @@ import pytest
 
 from pippal import config
 from pippal import i18n_fallback as fb
+from pippal.web_ui import i18n_view
 from pippal.web_ui.i18n_view import language_config_view
+
+_CANONICAL = ["en", "zh-CN", "de", "hu", "uk", "pt-BR"]
 
 
 class TestLanguageConfigKey:
@@ -121,6 +124,27 @@ class TestLanguageConfigView:
         language_config_view(cfg)
         assert "language_resolved" not in cfg
         assert "supported_languages" not in cfg
+
+    def test_picker_order_is_canonical_regardless_of_resolver(self, monkeypatch):
+        # The real engine (T-102) ships SUPPORTED_LANGS alphabetically; the
+        # view must still emit the canonical design order so the picker (and
+        # its e2e order assert) is stable across the T-102 merge.
+        monkeypatch.setattr(
+            i18n_view, "SUPPORTED_LANGS", ["de", "en", "hu", "pt-BR", "uk", "zh-CN"]
+        )
+        view = language_config_view(dict(config.DEFAULT_CONFIG))
+        assert [o["tag"] for o in view["supported_languages"]] == _CANONICAL
+
+    def test_unknown_tag_is_appended_sorted(self, monkeypatch):
+        # A future 7th/8th language (not in the canonical list) is appended
+        # after the canonical set, sorted among themselves.
+        monkeypatch.setattr(
+            i18n_view, "SUPPORTED_LANGS", ["zz", "de", "en", "aa"]
+        )
+        view = language_config_view(dict(config.DEFAULT_CONFIG))
+        assert [o["tag"] for o in view["supported_languages"]] == [
+            "en", "de", "aa", "zz",
+        ]
 
 
 @pytest.mark.parametrize(

@@ -4,11 +4,17 @@
 
 import { U, API, toast, fail, confirmDialog } from "./app-core.js";
 
-// Minimal translate shim: use the real i18n engine (window.t, T-101) when
-// it is present; otherwise render the English literal. The static labels
-// carry their design key so T-104's catalog extraction can wire them.
+// Minimal translate shim honouring T-101's t(key, params) contract: call
+// window.t(key) with NO second positional arg (that slot is params). The
+// English literal is the shim's OWN fallback for when the engine is absent
+// or has no entry yet (T-101 returns the ⟦key⟧ missing-key marker).
+// The static labels carry their design key so T-104 can wire them.
 function tt(key, english) {
-  return typeof window.t === "function" ? window.t(key, english) : english;
+  if (typeof window.t === "function") {
+    var s = window.t(key);
+    if (typeof s === "string" && s !== "⟦" + key + "⟧") return s;
+  }
+  return english;
 }
 
 // ------------------------------------------------------------------

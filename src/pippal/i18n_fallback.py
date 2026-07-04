@@ -109,10 +109,3 @@ def resolve_language(
     if picked:
         return picked
     return "en"
-
-
-def supported_language_options() -> list[dict[str, str]]:
-    """``[{"tag", "name"}]`` for the Settings picker, driven by
-    :data:`SUPPORTED_LANGS` (the single source of truth for which
-    languages the picker offers)."""
-    return [{"tag": tag, "name": native_name(tag)} for tag in SUPPORTED_LANGS]

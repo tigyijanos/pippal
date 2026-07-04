@@ -17,6 +17,18 @@ except Exception:  # pragma: no cover - fallback until pippal.i18n lands
     from ..i18n_fallback import SUPPORTED_LANGS, resolve_language
 from ..i18n_fallback import native_name
 
+# Canonical picker order (design §5.3). The view emits languages in THIS
+# order regardless of the resolver source — the real engine's SUPPORTED_LANGS
+# is alphabetical while the fallback ships design order — so the picker (and
+# its e2e order assert) is deterministic before AND after the T-102 engine
+# merges. Any tag not listed here (a future 7th language) is appended, sorted.
+_CANONICAL_ORDER: tuple[str, ...] = ("en", "zh-CN", "de", "hu", "uk", "pt-BR")
+
+
+def _ordered_langs(tags: list[str]) -> list[str]:
+    rank = {tag: i for i, tag in enumerate(_CANONICAL_ORDER)}
+    return sorted(tags, key=lambda t: (rank.get(t, len(rank)), t))
+
 
 def language_config_view(config: dict[str, Any]) -> dict[str, Any]:
     """Return a copy of ``config`` augmented with the resolved UI language
@@ -32,6 +44,7 @@ def language_config_view(config: dict[str, Any]) -> dict[str, Any]:
     raw_lang = str(view.get("language", "") or "")
     view["language_resolved"] = resolve_language(raw_lang)
     view["supported_languages"] = [
-        {"tag": tag, "name": native_name(tag)} for tag in SUPPORTED_LANGS
+        {"tag": tag, "name": native_name(tag)}
+        for tag in _ordered_langs(list(SUPPORTED_LANGS))
     ]
     return view
