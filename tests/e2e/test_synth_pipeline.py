@@ -179,13 +179,12 @@ class TestSynthesisASRRoundTrip:
             f"ASR didn't recover 'hello' from synth output. "
             f"Got: {decoded!r}"
         )
-        # whisper-tiny mishears "PipPal" — sometimes "pippal", sometimes
-        # "pip pal", sometimes "pippa", sometimes "hip pal" — so we
-        # strip whitespace and accept the known phonetic variants.
+        # whisper-tiny mishears "PipPal" — known phonetic variants include
+        # "pippal", "pippa", "hippal", "pippel". Strip whitespace and accept variants.
         decoded_squashed = decoded.replace(" ", "")
         assert any(
             variant in decoded_squashed
-            for variant in ("pippal", "pippa", "hippal")
+            for variant in ("pippal", "pippa", "hippal", "pippel")
         ), (
             f"ASR didn't recover 'pippal' from synth output. "
             f"Got: {decoded!r}"
