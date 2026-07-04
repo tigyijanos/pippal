@@ -262,17 +262,21 @@ def test_shipped_catalogs_support_all_six_languages() -> None:
     assert i18n.SUPPORTED_LANGS[0] == "en"
 
 
-def test_shipped_skeleton_catalogs_declare_en_fallback() -> None:
-    """Each shipped non-en catalog is _meta-only (T-104 fills strings) and
-    chains to en, so every lookup falls back to English in the interim."""
+def test_shipped_non_en_catalogs_are_populated_and_declare_en_fallback() -> None:
+    """Each shipped non-en catalog is now FULLY populated (T-105 filled the
+    translations) and still chains to en, so any not-yet-added key falls back to
+    English. (Pre-T-105 this asserted _meta-only skeletons; T-105 fills them.)"""
+    en_keys = {k for k in i18n.load_catalog("en") if not k.startswith("_")}
     for lang in ("zh-CN", "de", "hu", "uk", "pt-BR"):
         catalog = i18n.load_catalog(lang)
         meta = catalog.get("_meta") or {}
         assert meta.get("lang") == lang
         assert meta.get("fallback") == "en"
-        # Skeleton carries no user-facing keys yet.
-        assert [k for k in catalog if not k.startswith("_")] == []
-        # Fallback chain reaches en.
+        # Catalog now carries the full en key set (completeness is asserted in
+        # detail by tests/test_i18n_catalogs.py).
+        lang_keys = {k for k in catalog if not k.startswith("_")}
+        assert lang_keys == en_keys
+        # Fallback chain still reaches en.
         assert i18n._fallback_chain(lang, None)[-1] == "en"
 
 

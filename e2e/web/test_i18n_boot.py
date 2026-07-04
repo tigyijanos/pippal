@@ -142,8 +142,9 @@ def test_i18n_boot_query_param_honoured_for_supported_lang(
     page: Page, app_url: str, step
 ):
     # ?lang=de is a supported language -> honoured as the resolved lang.
-    # Only en.json ships in T-101, so the de catalog 404s and the chrome
-    # falls back to en text — but document.lang still reflects the pick.
+    # Since T-105 the de catalog ships, so the chrome renders the GERMAN value
+    # (asserted against the de catalog oracle), and document.lang reflects the
+    # pick.
     page.goto(f"{app_url}/index.html?view=settings&lang=de")
     _wait_i18n_ready(page)
 
@@ -151,12 +152,12 @@ def test_i18n_boot_query_param_honoured_for_supported_lang(
     assert lang == "de", f"?lang=de must be honoured, got {lang!r}"
     step.check("?lang=de honoured: document.documentElement.lang == 'de'")
 
-    # en fallback keeps the chrome English (no marker) even without a de
-    # catalog present.
-    en = _en_catalog()
-    assert page.evaluate("window.t('chrome.close')") == en["chrome.close"]
+    # The shipped de catalog now supplies the translation (no en fallback for a
+    # present key), and no ⟦key⟧ marker leaks.
+    de = json.loads((WEBUI / "i18n" / "de.json").read_text("utf-8"))
+    assert page.evaluate("window.t('chrome.close')") == de["chrome.close"]
     assert MARKER_OPEN not in page.content()
-    step.check("missing de catalog falls back to en chrome (no marker)")
+    step.check("de catalog supplies the German chrome value (no marker)")
 
 
 def test_i18n_boot_unsupported_query_param_falls_back_to_en(
