@@ -89,22 +89,81 @@
     return nav.language || null;
   }
 
-  function resolveLang() {
-    // 1. Host-injected (Python/harness has already resolved+validated).
+  // Synchronous seams that never need a backend round-trip:
+  //   1. Host-injected global (desktop: Python injects a pre-validated tag).
+  //   2. Explicit ?lang= query param — the served-harness override AND the
+  //      desktop URL-append seam (window_lifecycle appends ?lang=<resolved>
+  //      so the desktop boots in the persisted/resolved language, T-107).
+  // Returns a supported tag, or null when neither seam is present.
+  function resolveLangSync() {
     if (window.__PIPPAL_LANG__) return String(window.__PIPPAL_LANG__);
-    // 2. Explicit ?lang= override (the served test harness). Honoured
-    //    when it maps onto a supported language; unsupported values fall
-    //    through rather than pinning an unknown tag.
     var mappedQuery = mapToSupported(queryLang());
     if (mappedQuery) return mappedQuery;
-    // 3. System language, mapped onto the supported set.
-    var mappedNav = mapToSupported(navigatorLang());
-    if (mappedNav) return mappedNav;
-    // 4. Fallback.
-    return FALLBACK_LANG;
+    return null;
   }
 
-  var LANG = resolveLang();
+  // Ask the PipPal host (via the local bridge server) for the PERSISTED
+  // language pick. This is what lets a page SERVED by the host — the Tier-1
+  // e2e harness, and any web context reaching /bridge — boot in the language
+  // the user chose in Settings (config.language) instead of the browser's
+  // navigator.language (T-107). Only an EXPLICIT pick (non-empty
+  // config.language) is honoured here; Auto ("") deliberately returns null so
+  // resolution falls through to navigator.language (the browser's own locale)
+  // — the desktop app supplies the OS-resolved Auto language synchronously via
+  // the ?lang= URL-append seam instead, so this path never needs the OS
+  // locale. Never throws: resolves to a supported tag or null. One short
+  // POST /bridge get_config, issued under the anti-FOUC cloak.
+  function resolveLangFromBridge() {
+    try {
+      return fetch("/bridge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: "get_config", args: [] }),
+        cache: "no-store",
+      })
+        .then(function (r) {
+          return r && r.ok ? r.json() : null;
+        })
+        .then(function (cfg) {
+          if (!cfg || typeof cfg !== "object") return null;
+          return mapToSupported(cfg.language) || null;
+        })
+        .catch(function () {
+          return null;
+        });
+    } catch (e) {
+      return Promise.resolve(null);
+    }
+  }
+
+  // Full resolution order (T-107):
+  //   __PIPPAL_LANG__ -> ?lang= -> bridge(config.language) -> navigator -> en.
+  // The bridge sits ABOVE navigator so an explicit persisted pick beats the
+  // browser locale; navigator is the degraded fallback when no host answers
+  // /bridge (or the pick is Auto).
+  function resolveLangAsync() {
+    var sync = resolveLangSync();
+    if (sync) return Promise.resolve(sync);
+    return resolveLangFromBridge().then(function (fromBridge) {
+      if (fromBridge) return fromBridge;
+      var mappedNav = mapToSupported(navigatorLang());
+      if (mappedNav) return mappedNav;
+      return FALLBACK_LANG;
+    });
+  }
+
+  // LANG is finalised ASYNCHRONOUSLY before catalogs load and the cloak lifts.
+  // It starts at the safe en fallback; resolveLangAsync() overwrites it (and
+  // t.lang) before loadCatalogs()/reveal() run — both are gated on _langReady
+  // below — so document.documentElement.lang and every t() lookup use the
+  // resolved language. A stalled bridge fetch degrades to navigator/en via the
+  // reveal watchdog rather than hanging the UI.
+  var LANG = FALLBACK_LANG;
+  var _langReady = resolveLangAsync().then(function (lang) {
+    LANG = lang;
+    t.lang = LANG;
+    return LANG;
+  });
 
   // --- plural probe ---------------------------------------------------
 
@@ -323,7 +382,12 @@
   // Load catalogs and DOM in parallel, then reveal. A watchdog reveals
   // anyway if catalog loading stalls, so a fetch hiccup can never leave
   // the UI permanently cloaked (zero-regression guarantee).
-  var _catalogsReady = loadCatalogs();
+  // Wait for the async language resolution (bridge consult) to finalise LANG
+  // BEFORE loading catalogs, so the active catalog fetched below is the
+  // resolved language's, not the en fallback the module started with.
+  var _catalogsReady = _langReady.then(function () {
+    return loadCatalogs();
+  });
   // Expose the catalog-load promise so the module graph (main.js) can defer
   // surface renderers — which call t() for their dynamic strings (T-104) —
   // until the catalogs are actually loaded. This is stricter than waiting on

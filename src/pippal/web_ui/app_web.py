@@ -25,7 +25,7 @@ from ..command_server import (
 from ..config import load_config
 from ..engine import TTSEngine
 from ..history import load_history, save_history
-from ..i18n import t
+from ..i18n import set_language, t
 from ..onboarding import should_show_activation_panel
 from ..paths import PIPER_EXE, ensure_dirs
 from ..tray import make_tray_icon
@@ -210,9 +210,26 @@ def build_tray_menu(
     return menu, primitives
 
 
+def _apply_boot_language(config: dict[str, Any]) -> str:
+    """Resolve + activate the UI language ONCE at startup (T-107).
+
+    Runs ``set_language(config["language"])`` (which resolves the precedence
+    ``explicit pick -> system locale -> en`` internally) so the Python runtime
+    (tray, toasts, native window titles) AND every web window created below
+    agree on the SAME language as the persisted config — independent of the OS
+    / browser locale. ``make_window`` reads the resulting ``get_language()``
+    and appends it to each surface's load URL. Returns the resolved tag.
+    """
+    return set_language(config.get("language", ""))
+
+
 def main() -> None:
     ensure_dirs()
     config = load_config()
+
+    # Resolve + activate the UI language before any window is created so the
+    # web surfaces boot in the persisted language, not navigator.language.
+    _apply_boot_language(config)
 
     if _selected_piper_missing(config):
         print(
