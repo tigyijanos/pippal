@@ -38,10 +38,6 @@ on:
   pull_request:
     branches: [main, release/**]
   workflow_dispatch:
-  schedule:
-    # Nightly at 03:17 UTC -- the release/journey lane runs off the
-    # per-PR critical path so it never blocks merges.
-    - cron: "17 3 * * *"
 
 permissions:
   contents: read
