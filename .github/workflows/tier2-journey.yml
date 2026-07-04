@@ -36,7 +36,7 @@ name: Tier-2 Journey E2E
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, release/**]
   workflow_dispatch:
   schedule:
     # Nightly at 03:17 UTC -- the release/journey lane runs off the
