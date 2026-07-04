@@ -204,16 +204,19 @@ def _start_reading_session(page: Page, app_url: str, step=None) -> None:
 # Settings
 # ---------------------------------------------------------------------------
 
-def test_settings_renders_eight_cards(page: Page, app_url: str, step):
+def test_settings_renders_nine_cards(page: Page, app_url: str, step):
     _goto(page, app_url, "settings", step)
     titles = page.locator(".card-title")
-    expect(titles).to_have_count(8)
-    step.check("8 settings cards rendered (.card-title == 8)")
+    # Nine cards: Voice, Language (0.3.1 i18n), Speech, Hotkeys, Reader
+    # panel, Windows integration, Diagnostics, Open-source notices, About.
+    expect(titles).to_have_count(9)
+    step.check("9 settings cards rendered (.card-title == 9)")
     expect(page.get_by_test_id("settings-engine")).to_be_visible()
+    expect(page.get_by_test_id("settings-language")).to_be_visible()
     expect(page.get_by_test_id("settings-save")).to_be_visible()
-    step.check("engine combo + Save button visible")
+    step.check("engine combo + language picker + Save button visible")
     # The promo banner appears at the top of the Settings view (above the
-    # 8 cards); it uses testid settings-promo and is NOT a card-title node.
+    # cards); it uses testid settings-promo and is NOT a card-title node.
     expect(page.get_by_test_id("settings-promo")).to_be_visible()
     step.check("settings-promo banner visible (above card rows)")
 

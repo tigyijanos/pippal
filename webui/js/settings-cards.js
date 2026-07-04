@@ -1,8 +1,70 @@
 /* settings-cards.js — Settings card builders. Free build: Piper voices only.
- * Only export: buildDiagCard. */
+ * Exports: buildLanguageCard, buildDiagCard. */
 "use strict";
 
 import { U, API, toast, fail, confirmDialog } from "./app-core.js";
+
+// Minimal translate shim honouring T-101's t(key, params) contract: call
+// window.t(key) with NO second positional arg (that slot is params). The
+// English literal is the shim's OWN fallback for when the engine is absent
+// or has no entry yet (T-101 returns the ⟦key⟧ missing-key marker).
+// The static labels carry their design key so T-104 can wire them.
+function tt(key, english) {
+  if (typeof window.t === "function") {
+    var s = window.t(key);
+    if (typeof s === "string" && s !== "⟦" + key + "⟧") return s;
+  }
+  return english;
+}
+
+// ------------------------------------------------------------------
+// Language card (0.3.1 i18n) — Auto (system) + one option per supported
+// catalog, each shown in its OWN language. Selecting persists via the
+// existing save_config seam (Auto writes ""); a restart hint covers the
+// tray, whose menu is built once at startup (design §5.5).
+// ------------------------------------------------------------------
+export function buildLanguageCard(cfg) {
+  cfg = cfg || {};
+
+  // Options are DRIVEN BY the backend's supported-language set
+  // (get_config -> supported_languages, itself SUPPORTED_LANGS): adding a
+  // catalog file adds an option here with no UI code change.
+  var supported = Array.isArray(cfg.supported_languages)
+    ? cfg.supported_languages
+    : [];
+  var opts = [{ value: "", label: tt("settings.lang.auto", "Auto (system)") }];
+  supported.forEach(function (l) {
+    if (l && l.tag) opts.push({ value: l.tag, label: l.name || l.tag });
+  });
+
+  // cfg.language is the RAW stored value ("" = Auto); the concrete tag the
+  // UI renders in is cfg.language_resolved.
+  var langSel = U.select("settings-language", opts, cfg.language || "");
+  langSel.classList.add("grow");
+
+  var trayHint = U.el("div", {
+    class: "card-hint",
+    testid: "settings-language-hint",
+    "data-i18n": "settings.lang.tray_hint",
+    text: tt("settings.lang.tray_hint", "Tray menu updates after restart."),
+  });
+
+  langSel.addEventListener("change", function () {
+    var tag = langSel.value; // "" = Auto
+    API.call("save_config", { language: tag }).then(function (r) {
+      if (r && r.ok) {
+        toast(tt("settings.lang.saved", "Language saved — reload to apply."));
+      } else {
+        fail(new Error(r && r.error ? r.error : "Failed to set language."));
+      }
+    }).catch(fail);
+  });
+
+  return U.card(tt("settings.lang.title", "Language"), [
+    U.fieldRow(tt("settings.lang.label", "Interface language"), langSel),
+    trayHint,
+  ]);
+}
 
 // ------------------------------------------------------------------
 // Diagnostics card (local logs only — no upload path).
