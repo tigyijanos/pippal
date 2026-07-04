@@ -1,0 +1,854 @@
+{
+  "_comment": "CLDR cardinal plural parity vectors generated from Intl.PluralRules (V8). Shared oracle for Python cldr_plural (T-102) and JS i18n.js (T-101).",
+  "source": "Intl.PluralRules",
+  "languages": [
+    "en",
+    "de",
+    "hu",
+    "uk",
+    "zh-CN",
+    "pt-BR"
+  ],
+  "vectors": [
+    {
+      "lang": "en",
+      "n": 0,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 1,
+      "category": "one"
+    },
+    {
+      "lang": "en",
+      "n": 2,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 3,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 4,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 5,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 6,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 7,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 8,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 9,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 10,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 11,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 12,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 13,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 14,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 15,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 20,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 21,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 22,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 23,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 24,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 25,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 100,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 101,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 111,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 1000,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 1.5,
+      "category": "other"
+    },
+    {
+      "lang": "en",
+      "n": 2.5,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 0,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 1,
+      "category": "one"
+    },
+    {
+      "lang": "de",
+      "n": 2,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 3,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 4,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 5,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 6,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 7,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 8,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 9,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 10,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 11,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 12,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 13,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 14,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 15,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 20,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 21,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 22,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 23,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 24,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 25,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 100,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 101,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 111,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 1000,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 1.5,
+      "category": "other"
+    },
+    {
+      "lang": "de",
+      "n": 2.5,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 0,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 1,
+      "category": "one"
+    },
+    {
+      "lang": "hu",
+      "n": 2,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 3,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 4,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 5,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 6,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 7,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 8,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 9,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 10,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 11,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 12,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 13,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 14,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 15,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 20,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 21,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 22,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 23,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 24,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 25,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 100,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 101,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 111,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 1000,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 1.5,
+      "category": "other"
+    },
+    {
+      "lang": "hu",
+      "n": 2.5,
+      "category": "other"
+    },
+    {
+      "lang": "uk",
+      "n": 0,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 1,
+      "category": "one"
+    },
+    {
+      "lang": "uk",
+      "n": 2,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 3,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 4,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 5,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 6,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 7,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 8,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 9,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 10,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 11,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 12,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 13,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 14,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 15,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 20,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 21,
+      "category": "one"
+    },
+    {
+      "lang": "uk",
+      "n": 22,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 23,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 24,
+      "category": "few"
+    },
+    {
+      "lang": "uk",
+      "n": 25,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 100,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 101,
+      "category": "one"
+    },
+    {
+      "lang": "uk",
+      "n": 111,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 1000,
+      "category": "many"
+    },
+    {
+      "lang": "uk",
+      "n": 1.5,
+      "category": "other"
+    },
+    {
+      "lang": "uk",
+      "n": 2.5,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 0,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 1,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 2,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 3,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 4,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 5,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 6,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 7,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 8,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 9,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 10,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 11,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 12,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 13,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 14,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 15,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 20,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 21,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 22,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 23,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 24,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 25,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 100,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 101,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 111,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 1000,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 1.5,
+      "category": "other"
+    },
+    {
+      "lang": "zh-CN",
+      "n": 2.5,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 0,
+      "category": "one"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 1,
+      "category": "one"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 2,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 3,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 4,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 5,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 6,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 7,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 8,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 9,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 10,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 11,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 12,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 13,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 14,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 15,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 20,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 21,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 22,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 23,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 24,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 25,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 100,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 101,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 111,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 1000,
+      "category": "other"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 1.5,
+      "category": "one"
+    },
+    {
+      "lang": "pt-BR",
+      "n": 2.5,
+      "category": "other"
+    }
+  ]
+}
