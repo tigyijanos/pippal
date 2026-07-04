@@ -37,6 +37,7 @@ after ``save_config`` (design §5.5); the tray menu remains restart-required.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import threading
@@ -138,12 +139,31 @@ _catalog_cache: dict[tuple[str, str], dict[str, Any]] = {}
 _cache_lock = threading.Lock()
 
 
+def _is_safe_lang(lang: str) -> bool:
+    """Reject language tags that could path-traverse (``/``, ``\\``, ``..``).
+
+    Real BCP-47 tags (``en``, ``pt-BR``, ``zh-CN``) never contain these.
+    """
+    if not lang:
+        return False
+    separators = {"/", "\\", os.sep}
+    if os.altsep:
+        separators.add(os.altsep)
+    if any(sep in lang for sep in separators):
+        return False
+    return ".." not in lang
+
+
 def load_catalog(lang: str, catalog_directory: Path | str | None = None) -> dict[str, Any]:
     """Load one language catalog as a dict (cached by directory + lang).
 
     A missing or malformed file yields an empty dict so the caller falls
-    through the ``en`` link of the chain instead of raising.
+    through the ``en`` link of the chain instead of raising. A ``lang`` that
+    contains a path separator or ``..`` is rejected outright (empty dict) so a
+    catalog lookup can never traverse outside the catalog directory.
     """
+    if not _is_safe_lang(lang):
+        return {}
     directory = _resolve_dir(catalog_directory)
     key = (str(directory), lang)
     with _cache_lock:
@@ -250,9 +270,15 @@ def cldr_plural(lang: str, n: float | int) -> str:
 
     Mirrors ``new Intl.PluralRules(lang).select(n)`` for en/de/hu/uk/pt-BR/zh-CN
     so the JS and Python UIs never disagree on the same screen (design §10).
+
+    A non-numeric or ``None`` count degrades to ``"other"`` rather than raising,
+    so a bad ``params`` value can never crash the ``t()`` surface it feeds.
     """
     rule = _PLURAL_RULES.get(lang, _plural_one_other)
-    i, v = _operands(n)
+    try:
+        i, v = _operands(n)
+    except (TypeError, ValueError):
+        return "other"
     return rule(i, v)
 
 

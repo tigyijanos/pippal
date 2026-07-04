@@ -92,6 +92,15 @@ def test_unknown_language_defaults_to_one_other() -> None:
     assert i18n.cldr_plural("fr", 2) == "other"
 
 
+def test_cldr_plural_non_numeric_count_degrades_to_other() -> None:
+    """A bad count must degrade to ``other``, never raise (t() surface safety)."""
+    assert i18n.cldr_plural("en", "abc") == "other"
+    assert i18n.cldr_plural("en", None) == "other"
+    assert i18n.cldr_plural("uk", object()) == "other"
+    # A numeric string still resolves normally.
+    assert i18n.cldr_plural("en", "1") == "one"
+
+
 # --------------------------------------------------------------------------
 # Catalog fixtures
 # --------------------------------------------------------------------------
@@ -183,6 +192,18 @@ def test_plural_uses_resolved_catalog_language(catalog: Path) -> None:
     )
 
 
+def test_t_plural_bad_count_is_safe(catalog: Path) -> None:
+    """A non-numeric / None count must not crash t(); it picks the ``other`` form."""
+    assert i18n.t("items.count", {"count": "abc"}, lang="en", catalog_directory=catalog) == (
+        "abc items"
+    )
+    assert i18n.t("items.count", {"count": None}, lang="en", catalog_directory=catalog) == (
+        "None items"
+    )
+    # Count placeholder entirely absent -> defaults to 0 -> other, no raise.
+    assert i18n.t("items.count", {}, lang="en", catalog_directory=catalog) == "{count} items"
+
+
 # --------------------------------------------------------------------------
 # SUPPORTED_LANGS — dynamic discovery (no hardcoded list)
 # --------------------------------------------------------------------------
@@ -199,6 +220,24 @@ def test_adding_dummy_catalog_extends_supported_langs(tmp_path: Path) -> None:
     langs = i18n.discover_langs(tmp_path)
     assert "xx" in langs
     assert langs[0] == "en"  # English always leads the fallback chain
+
+
+@pytest.mark.parametrize(
+    "malicious",
+    ["../../etc/passwd", "a/b", "..\\..\\windows\\win.ini", "..", "en/../de", ""],
+)
+def test_load_catalog_rejects_path_traversal(tmp_path: Path, malicious: str) -> None:
+    """A lang with separators or ``..`` returns {} without escaping the catalog dir."""
+    # Plant a file OUTSIDE the catalog dir that a traversal could otherwise read.
+    outside = tmp_path.parent / "secret.json"
+    outside.write_text('{"_meta": {"lang": "secret"}}', encoding="utf-8")
+    try:
+        catalog_dir = tmp_path / "i18n"
+        catalog_dir.mkdir()
+        i18n.clear_catalog_cache()
+        assert i18n.load_catalog(malicious, catalog_directory=catalog_dir) == {}
+    finally:
+        outside.unlink(missing_ok=True)
 
 
 def test_private_underscore_files_are_ignored(tmp_path: Path) -> None:
