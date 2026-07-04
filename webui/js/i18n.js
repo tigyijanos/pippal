@@ -111,19 +111,33 @@
   var HAS_PLURAL_RULES =
     typeof Intl !== "undefined" && typeof Intl.PluralRules === "function";
 
-  var _pluralSelector = null;
+  // Cache one selector PER language: a plural key resolves against the
+  // language of the catalog it was found in (active vs en fallback), so
+  // pluralCategory can be called with more than one lang per boot.
+  var _pluralSelectors = {};
   function pluralCategory(lang, n) {
     if (!HAS_PLURAL_RULES) return "other";
     try {
-      if (!_pluralSelector) {
-        _pluralSelector = new Intl.PluralRules(lang);
+      var sel = _pluralSelectors[lang];
+      if (!sel) {
+        sel = new Intl.PluralRules(lang);
+        _pluralSelectors[lang] = sel;
       }
-      return _pluralSelector.select(Number(n));
+      return sel.select(Number(n));
     } catch (e) {
       // An unknown/rejected locale -> a permissive default rather than a
       // hard failure (the engine must never throw from t()).
       return "other";
     }
+  }
+
+  /** The language a catalog is written in (its _meta.lang), used to pick
+   *  the plural category. Falls back to the resolved active LANG. */
+  function catalogLang(catalog) {
+    if (catalog && catalog._meta && catalog._meta.lang) {
+      return catalog._meta.lang;
+    }
+    return LANG;
   }
 
   // --- catalog state + t() -------------------------------------------
@@ -138,10 +152,12 @@
 
   function interpolate(template, params) {
     if (!params) return template;
-    return template.replace(/\{([^{}]+)\}/g, function (whole, name) {
-      var key = name.trim();
-      if (Object.prototype.hasOwnProperty.call(params, key)) {
-        return String(params[key]);
+    // Mirror the Python engine's placeholder shape exactly: \{(\w+)\}.
+    // A word-only name (no spaces/dots/hyphens) keeps "{ name }",
+    // "{user.name}" and "{file-id}" LITERAL in BOTH runtimes.
+    return template.replace(/\{(\w+)\}/g, function (whole, name) {
+      if (Object.prototype.hasOwnProperty.call(params, name)) {
+        return String(params[name]);
       }
       return whole; // missing param -> leave the literal "{name}"
     });
@@ -160,7 +176,13 @@
       // Plural object: { "_plural": "count", "one": "...", "other": "..." }
       var countName = value._plural;
       var n = params && countName ? params[countName] : undefined;
-      var category = pluralCategory(LANG, n);
+      // Missing count defaults to 0 (mirrors the Python engine) so a
+      // plural key rendered without a count is deterministic across both
+      // runtimes (e.g. pt-BR: no count -> 0 -> "one").
+      if (n === undefined || n === null) n = 0;
+      // Select the category using the language of the catalog the key was
+      // FOUND in (the design contract), not necessarily the active LANG.
+      var category = pluralCategory(catalogLang(catalog), n);
       if (Object.prototype.hasOwnProperty.call(value, category)) {
         return value[category];
       }

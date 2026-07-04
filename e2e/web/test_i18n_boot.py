@@ -197,6 +197,31 @@ def test_i18n_boot_host_injected_catalog_translates_with_interpolation(
     step.check("missing param leaves the literal {name} placeholder")
 
 
+def test_i18n_boot_placeholder_shape_matches_python(page: Page, app_url: str, step):
+    """Only \\{(\\w+)\\} is a placeholder — identical to the Python engine.
+    "{ name }" (spaces), "{user.name}" (dot) and "{file-id}" (hyphen) must
+    stay LITERAL in JS too, so a catalog string interpolates the same way
+    in both runtimes."""
+    cat = {
+        "_meta": {"lang": "de", "name": "German", "fallback": "en"},
+        "ph.word": "Hi {name}",
+        "ph.spaced": "Hi { name }",
+        "ph.dotted": "Hi {user.name}",
+        "ph.hyphen": "id {file-id}",
+    }
+    _inject_host_catalog(page, "de", cat)
+    _boot(page, app_url, "settings")
+
+    params = "{name: 'Ada', 'user.name': 'Ada', 'file-id': 'F1'}"
+    # Only the bare word placeholder is substituted.
+    assert page.evaluate("window.t('ph.word', " + params + ")") == "Hi Ada"
+    # Non-word placeholders stay literal in BOTH engines.
+    assert page.evaluate("window.t('ph.spaced', " + params + ")") == "Hi { name }"
+    assert page.evaluate("window.t('ph.dotted', " + params + ")") == "Hi {user.name}"
+    assert page.evaluate("window.t('ph.hyphen', " + params + ")") == "id {file-id}"
+    step.check("only {word} interpolates; { name }/{user.name}/{file-id} stay literal")
+
+
 def test_i18n_boot_fallback_chain_active_then_en_then_marker(
     page: Page, app_url: str, step
 ):
@@ -235,10 +260,21 @@ def test_i18n_boot_fallback_chain_active_then_en_then_marker(
         # zh-CN: no plural distinction — always other.
         ("zh-CN", 1, "other"),
         ("zh-CN", 5, "other"),
+        # pt-BR: one for 0..1, other otherwise (JS<->Python parity).
+        ("pt-BR", 0, "one"),
+        ("pt-BR", 1, "one"),
+        ("pt-BR", 2, "other"),
+        # Missing count defaults to 0 in BOTH engines -> pt-BR "one".
+        # (n=None => call t() with NO params.)
+        ("pt-BR", None, "one"),
     ],
+    # NOTE: T-102 (PR #129) lands tests/fixtures/plural_parity.json as a
+    # shared JS<->Python vector source; that file is not on this branch's
+    # base yet, so these vectors are inline. T-304 wires the shared
+    # fixture into both engines' parity tests.
 )
 def test_i18n_boot_plural_category_selection(
-    page: Page, app_url: str, step, lang: str, n: int, expected: str
+    page: Page, app_url: str, step, lang: str, n: int | None, expected: str
 ):
     # A plural value stores one template per CLDR category; the template
     # is set to the category NAME so the test asserts the SELECTED
@@ -256,8 +292,14 @@ def test_i18n_boot_plural_category_selection(
     _boot(page, app_url, "settings")
 
     assert page.evaluate("window.t.diag().hasPluralRules") is True
-    got = page.evaluate("window.t('items.count', {n: " + str(n) + "})")
+    if n is None:
+        # No count param at all -> engine defaults the count to 0.
+        got = page.evaluate("window.t('items.count')")
+        label = "missing count (default 0)"
+    else:
+        got = page.evaluate("window.t('items.count', {n: " + str(n) + "})")
+        label = f"n={n}"
     assert got == expected, (
-        f"{lang} n={n}: expected CLDR category {expected!r}, got {got!r}"
+        f"{lang} {label}: expected CLDR category {expected!r}, got {got!r}"
     )
-    step.check(f"{lang} n={n} -> CLDR category {got!r}")
+    step.check(f"{lang} {label} -> CLDR category {got!r}")
