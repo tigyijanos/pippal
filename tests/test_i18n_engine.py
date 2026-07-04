@@ -253,6 +253,44 @@ def test_module_supported_langs_includes_shipped_en() -> None:
     assert "en" in i18n.SUPPORTED_LANGS
 
 
+def test_shipped_catalogs_support_all_six_languages() -> None:
+    """All six 0.3.1 languages ship as (skeleton) catalogs so discovery — and
+    therefore the Settings picker (T-103) — sees the full set on merged main,
+    even before T-105 fills the translations."""
+    assert set(i18n.SUPPORTED_LANGS) == {"en", "zh-CN", "de", "hu", "uk", "pt-BR"}
+    # English always leads (universal fallback).
+    assert i18n.SUPPORTED_LANGS[0] == "en"
+
+
+def test_shipped_skeleton_catalogs_declare_en_fallback() -> None:
+    """Each shipped non-en catalog is _meta-only (T-104 fills strings) and
+    chains to en, so every lookup falls back to English in the interim."""
+    for lang in ("zh-CN", "de", "hu", "uk", "pt-BR"):
+        catalog = i18n.load_catalog(lang)
+        meta = catalog.get("_meta") or {}
+        assert meta.get("lang") == lang
+        assert meta.get("fallback") == "en"
+        # Skeleton carries no user-facing keys yet.
+        assert [k for k in catalog if not k.startswith("_")] == []
+        # Fallback chain reaches en.
+        assert i18n._fallback_chain(lang, None)[-1] == "en"
+
+
+def test_skeleton_de_lookup_falls_back_to_en_value(tmp_path: Path) -> None:
+    """Mirrors the shipped shape (en holds the string, de is a _meta-only
+    skeleton): a de lookup returns the en value via the fallback chain."""
+    (tmp_path / "en.json").write_text(
+        json.dumps({"_meta": {"lang": "en", "fallback": "en"}, "footer.save": "Save"}),
+        encoding="utf-8",
+    )
+    (tmp_path / "de.json").write_text(
+        json.dumps({"_meta": {"lang": "de", "fallback": "en"}}),
+        encoding="utf-8",
+    )
+    i18n.clear_catalog_cache()
+    assert i18n.t("footer.save", lang="de", catalog_directory=tmp_path) == "Save"
+
+
 # --------------------------------------------------------------------------
 # System-language detection (monkeypatched locale — never reads CI locale)
 # --------------------------------------------------------------------------
