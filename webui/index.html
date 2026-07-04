@@ -1,13 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="i18n-cloak">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';" />
   <title>PipPal</title>
+  <!-- Anti-FOUC cloak: keep the document invisible until i18n.js has the
+       catalog + DOM and has filled the static chrome, so non-English
+       users never see an English flash. i18n.js removes the class; the
+       <noscript> fallback reveals the (English) chrome if JS is off. -->
+  <style>html.i18n-cloak{visibility:hidden}</style>
+  <noscript><style>html.i18n-cloak{visibility:visible}</style></noscript>
   <link rel="stylesheet" href="css/theme.css" />
   <link rel="stylesheet" href="css/surfaces.css" />
+  <!-- Blocking classic i18n runtime — loaded BEFORE the module graph so
+       window.t exists before any surface renderer evaluates. -->
+  <script src="js/i18n.js"></script>
 </head>
 <body>
   <div id="root">
@@ -25,7 +34,9 @@
         <span class="brand" id="brand-name">PipPal</span>
       </span>
       <button class="winbtn close" id="btn-window-close" data-testid="window-close"
-              title="Close" aria-label="Close">&#x2715;</button>
+              title="Close" aria-label="Close"
+              data-i18n-title="chrome.close"
+              data-i18n-aria-label="chrome.close">&#x2715;</button>
     </div>
 
     <!-- View container — one of the surfaces is rendered here by main.js -->
@@ -33,11 +44,11 @@
 
     <!-- Footer (Settings only) -->
     <div class="footer hidden" id="footer">
-      <button id="btn-reset" data-testid="settings-reset">Reset to defaults</button>
+      <button id="btn-reset" data-testid="settings-reset" data-i18n="footer.reset">Reset to defaults</button>
       <span class="spacer"></span>
-      <button id="btn-cancel" data-testid="settings-cancel">Cancel</button>
-      <button id="btn-apply" data-testid="settings-apply">Apply</button>
-      <button class="primary" id="btn-save" data-testid="settings-save">Save</button>
+      <button id="btn-cancel" data-testid="settings-cancel" data-i18n="footer.cancel">Cancel</button>
+      <button id="btn-apply" data-testid="settings-apply" data-i18n="footer.apply">Apply</button>
+      <button class="primary" id="btn-save" data-testid="settings-save" data-i18n="footer.save">Save</button>
     </div>
   </div>
 
@@ -55,9 +66,9 @@
       <div class="modal-body" id="confirm-body"
            data-testid="confirm-body"></div>
       <div class="modal-actions">
-        <button id="confirm-cancel" data-testid="confirm-cancel">No</button>
+        <button id="confirm-cancel" data-testid="confirm-cancel" data-i18n="confirm.no">No</button>
         <button class="danger" id="confirm-ok"
-                data-testid="confirm-ok">Yes</button>
+                data-testid="confirm-ok" data-i18n="confirm.yes">Yes</button>
       </div>
     </div>
   </div>
