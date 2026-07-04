@@ -38,6 +38,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "overlay_y_offset": 100,
     "karaoke_offset_ms": 120,
 
+    # UI language (BCP-47 tag, e.g. "de"). Empty string = "Auto":
+    # follow the system language when it is supported, else English.
+    # Resolved to a concrete tag by pippal.i18n (see i18n_fallback until
+    # the T-101/T-102 engine lands) and surfaced to the web UI through
+    # `get_config`. The Settings language picker writes this key via the
+    # existing save_config seam — zero new config machinery (0.3.1 i18n).
+    "language": "",
+
     # Built-in hotkeys — Windows+Shift+letter scheme. Chrome / Edge /
     # Firefox / Office never see Win-key combinations, so we don't
     # trample browser actions like Ctrl+Shift+T (reopen tab) or

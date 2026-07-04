@@ -37,6 +37,7 @@ from ..onboarding import (
 from ..paths import VOICES_DIR
 from ..voices import installed_voices, locale_name, voice_filename
 from .bridge_diag_settings import DiagSettingsBridgeMixin
+from .i18n_view import language_config_view
 from .overlay_state import WebOverlay
 
 
@@ -80,7 +81,8 @@ class PipPalBridge(DiagSettingsBridgeMixin):
     # ------------------------------------------------------------------
 
     def get_config(self) -> dict[str, Any]:
-        return dict(self.config)
+        # Augment with the resolved UI language + picker options (i18n §5.3).
+        return language_config_view(self.config)
 
     def get_defaults(self) -> dict[str, Any]:
         return _layered_defaults()

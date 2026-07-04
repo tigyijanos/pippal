@@ -462,7 +462,13 @@ def test_tray_recent_replay_specific_item_and_empty_state_real_effect(
             def _replayed_text_landed() -> bool:
                 snap = bridge.engine_state()
                 ct = (snap.get("chunk_text") or "").strip()
-                return entry_two.split(" — ")[0] in ct or ct in entry_two
+                # Wait until the SPECIFIC entry's text has ACTUALLY landed.
+                # The old `... or ct in entry_two` clause was True for an
+                # empty chunk_text ("" is a substring of everything), so the
+                # poll could return before the real async read populated the
+                # overlay — the downstream `"BRAVO" in chunk_text` assert
+                # then flaked. Require the distinctive leading segment.
+                return entry_two.split(" — ")[0] in ct
 
             _deadline_poll(
                 page,

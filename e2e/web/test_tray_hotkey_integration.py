@@ -165,12 +165,12 @@ def test_tray_settings_item_opens_settings_surface(
 
         # …and that surface is real: it renders through the same served
         # bridge the Playwright tests use (cf. test_settings_renders_
-        # eight_cards / row 2.0).
+        # nine_cards / row 2.0).
         _goto(page, app_url, "settings", step)
-        expect(page.locator(".card-title")).to_have_count(8)
+        expect(page.locator(".card-title")).to_have_count(9)
         expect(page.get_by_test_id("settings-save")).to_be_visible()
         step.check("Settings surface renders for real through the served bridge "
-                   "(8 cards + Save)")
+                   "(9 cards + Save)")
     finally:
         hkm.stop()
 

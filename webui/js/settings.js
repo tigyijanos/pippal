@@ -12,7 +12,7 @@ import {
   INSTALLED_VOICES_CHANGED_EVENT,
   INSTALLED_VOICES_CHANGED_KEY,
 } from "./app-core.js";
-import { buildDiagCard } from "./settings-cards.js";
+import { buildLanguageCard, buildDiagCard } from "./settings-cards.js";
 import { ctxText } from "./settings-footer.js";
 
 // ------------------------------------------------------------------
@@ -326,6 +326,9 @@ export function renderSettings() {
       ]),
     ]);
 
+    // ---- Language card ----
+    var languageCard = buildLanguageCard(cfg);
+
     // ---- Diagnostics card ----
     var diagCard = buildDiagCard(diagState);
 
@@ -405,6 +408,7 @@ export function renderSettings() {
 
     view.appendChild(promoCard);
     view.appendChild(voiceCard);
+    view.appendChild(languageCard);
     view.appendChild(speechCard);
     view.appendChild(hotkeysCard);
     view.appendChild(panelCard);
