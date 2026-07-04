@@ -27,6 +27,7 @@ from ..context_menu import (
     install_context_menu,
     uninstall_context_menu,
 )
+from ..i18n import t as _t
 from ..onboarding import (
     activation_sample_text,
     build_activation_readiness,
@@ -99,30 +100,30 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         return {
             "version": __version__,
             "links": [
-                {"key": "website", "text": "Website", "url": "https://pippal.bugfactory.hu"},
+                {"key": "website", "text": _t("about.link.website"), "url": "https://pippal.bugfactory.hu"},
                 {
                     "key": "github",
-                    "text": "GitHub",
+                    "text": _t("about.link.github"),
                     "url": "https://github.com/bug-factory-kft/pippal",
                 },
                 {
                     "key": "licence",
-                    "text": "Licence (MIT)",
+                    "text": _t("about.link.licence"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/LICENSE.md",
                 },
                 {
                     "key": "privacy",
-                    "text": "Privacy",
+                    "text": _t("about.link.privacy"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/docs/PRIVACY.md",
                 },
                 {
                     "key": "terms",
-                    "text": "Terms",
+                    "text": _t("about.link.terms"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/docs/TERMS.md",
                 },
                 {
                     "key": "reddit",
-                    "text": "Community (Reddit)",
+                    "text": _t("about.link.reddit"),
                     "url": "https://www.reddit.com/r/PipPalApp/",
                 },
             ],
@@ -277,7 +278,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
 
         def _download_one(url: str, dest: Any, base_pct: float, span: float, dlabel: str) -> None:
             url = _encode_download_url(url)
-            set_progress(status=f"Downloading {dlabel}…")
+            set_progress(status=_t("voice.status.downloading", {"label": dlabel}))
             with _urlreq.urlopen(url, timeout=DOWNLOAD_TIMEOUT_S) as resp, \
                     open(str(dest), "wb") as f:
                 total = int(resp.headers.get("Content-Length") or 0)
@@ -316,7 +317,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         self,
         voice_getter: Callable[[], dict[str, Any]],
         *,
-        start_msg: str = "Starting…",
+        start_msg: str | None = None,
     ) -> dict[str, Any]:
         """Internal: start a voice download on a background thread; return task_id.
 
@@ -325,6 +326,8 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         """
         import uuid
 
+        if start_msg is None:
+            start_msg = _t("voice.status.starting")
         task_id = uuid.uuid4().hex
         with self._voice_task_lock:
             self._voice_tasks[task_id] = {
@@ -359,7 +362,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
                     self.engine.reset_backend()
                 except Exception:
                     pass
-                _set(pct=100.0, status="✓ Done.")
+                _set(pct=100.0, status=_t("voice.status.done"))
                 with self._voice_task_lock:
                     t = self._voice_tasks.get(task_id, {})
                     t["installed"] = filename
@@ -371,7 +374,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
                     t = self._voice_tasks.get(task_id, {})
                     if t is not None:
                         t["error"] = str(exc)
-                        t["status"] = "Cancelled." if cancelled else f"Failed: {str(exc)[:200]}"
+                        t["status"] = _t("voice.status.cancelled") if cancelled else _t("voice.status.failed", {"error": str(exc)[:200]})
                         t["cancelled"] = cancelled
                         t["done"] = True
                         t["running"] = False
@@ -400,7 +403,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         a task_id.
         """
         return self._start_voice_install_async(
-            default_piper_voice, start_msg="Downloading default voice…"
+            default_piper_voice, start_msg=_t("voice.status.downloading_default")
         )
 
     def voice_install_status(self, task_id: str) -> dict[str, Any]:
@@ -557,15 +560,11 @@ class PipPalBridge(DiagSettingsBridgeMixin):
 
         path = resolve_notices_path()
         if path is None:
-            return (
-                "Open-source notices were not found.\n\n"
-                "Please reinstall PipPal to restore the licences file, or "
-                "open docs/THIRD_PARTY.md from the source checkout."
-            )
+            return _t("notices.not_found")
         try:
             return path.read_text(encoding="utf-8")
         except Exception as exc:  # pragma: no cover - defensive
-            return f"Could not read {path}\n\n{exc}"
+            return _t("notices.read_error", {"path": str(path), "error": str(exc)})
 
     # ------------------------------------------------------------------
     # Window control (host callbacks)

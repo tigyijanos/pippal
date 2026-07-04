@@ -25,6 +25,7 @@ from ..command_server import (
 from ..config import load_config
 from ..engine import TTSEngine
 from ..history import load_history, save_history
+from ..i18n import t
 from ..onboarding import should_show_activation_panel
 from ..paths import PIPER_EXE, ensure_dirs
 from ..tray import make_tray_icon
@@ -172,30 +173,34 @@ def build_tray_menu(
     def history_submenu() -> list[pystray.MenuItem]:
         items = engine.get_history()
         if not items:
-            return [pystray.MenuItem("(empty)", lambda _i, _it: None, enabled=False)]
+            return [
+                pystray.MenuItem(
+                    t("tray.recent_empty"), lambda _i, _it: None, enabled=False
+                )
+            ]
         out = []
-        for t in items[:10]:
-            preview = t.replace("\n", " ").strip()
+        for entry in items[:10]:
+            preview = entry.replace("\n", " ").strip()
             if len(preview) > 70:
                 preview = preview[:67] + "…"
-            out.append(pystray.MenuItem(preview, replay_handler(t)))
+            out.append(pystray.MenuItem(preview, replay_handler(entry)))
         out.append(pystray.Menu.SEPARATOR)
         out.append(
-            pystray.MenuItem("Clear history", lambda _i, _it: engine.clear_history())
+            pystray.MenuItem(t("tray.clear_history"), lambda _i, _it: engine.clear_history())
         )
         return out
 
     menu = pystray.Menu(
-        pystray.MenuItem("Recent", pystray.Menu(history_submenu)),
-        pystray.MenuItem("First-run check", lambda _i, _it: windows.open("onboarding")),
+        pystray.MenuItem(t("tray.recent"), pystray.Menu(history_submenu)),
+        pystray.MenuItem(t("tray.first_run_check"), lambda _i, _it: windows.open("onboarding")),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem(
-            "Settings…",
+            t("tray.settings"),
             lambda _i, _it: windows.open("settings"),
             default=True,
         ),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Quit", quit_action),
+        pystray.MenuItem(t("tray.quit"), quit_action),
     )
     primitives = {
         "quit_action": quit_action,
@@ -355,7 +360,7 @@ def main() -> None:
         brand = config.get("brand_name", "PipPal")
         try:
             ic.icon = make_tray_icon(speaking)
-            ic.title = f"{brand} — speaking" if speaking else brand
+            ic.title = t("tray.tooltip_speaking", {"brand": brand}) if speaking else brand
         except Exception:
             pass
 

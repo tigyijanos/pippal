@@ -5,7 +5,7 @@
  * Shared singletons come from app-core.js. */
 "use strict";
 
-import { U, API, view, footer } from "./app-core.js";
+import { U, API, t, view, footer } from "./app-core.js";
 
 // ------------------------------------------------------------------
 // Compact Markdown → HTML renderer — notices surface only.
@@ -160,8 +160,9 @@ function _mdToHtml(md) {
 // ------------------------------------------------------------------
 export function renderNotices() {
   return API.call("get_notices").then(function (text) {
-    document.getElementById("brand-name").textContent =
-      "PipPal - Open-source licences";
+    document.getElementById("brand-name").textContent = t(
+      "notices.window_title",
+    );
     footer.classList.add("hidden");
     view.innerHTML = "";
     var bodyEl = U.el("div", {

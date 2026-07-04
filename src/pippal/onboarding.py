@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import DEFAULT_CONFIG
+from .i18n import t
 from .paths import ASSET_NO_VOICE_WAV, DATA_ROOT, PIPER_EXE, VOICES_DIR
 from .voices import KNOWN_VOICES, PiperVoice, installed_voices, voice_filename
 
@@ -46,9 +47,11 @@ READINESS_READY = "ready"
 READINESS_MISSING_PIPER = "missing_piper"
 READINESS_MISSING_VOICE = "missing_voice"
 
-SAMPLE_TEXT_TEMPLATE = (
-    "PipPal is reading locally. Select text anywhere, then press {hotkey}."
-)
+# SELECTED_TEXT_CAPTURE_FAILURE is a cross-module STATUS SENTINEL: engine.py
+# records it as the activation last_failure and the value is compared for
+# equality across modules/tests, so it stays a stable English constant (it is
+# surfaced to the user only wrapped by activation_failure_recovery_message,
+# whose template IS catalog-sourced with a {failure} placeholder).
 SELECTED_TEXT_CAPTURE_FAILURE = "No selected text was captured."
 
 
@@ -188,7 +191,7 @@ def should_show_activation_panel(path: Path | None = None) -> bool:
 def format_hotkey(combo: object) -> str:
     text = str(combo or "").strip()
     if not text:
-        return "Not configured"
+        return t("onboarding.hotkey.not_configured")
     labels = {
         "control": "Ctrl",
         "ctrl": "Ctrl",
@@ -204,11 +207,14 @@ def format_hotkey(combo: object) -> str:
         if not part:
             continue
         parts.append(labels.get(part, part.upper() if len(part) == 1 else part.title()))
-    return "+".join(parts) if parts else "Not configured"
+    return "+".join(parts) if parts else t("onboarding.hotkey.not_configured")
 
 
 def activation_sample_text(hotkey_label: str) -> str:
-    return SAMPLE_TEXT_TEMPLATE.format(hotkey=hotkey_label or "the read hotkey")
+    return t(
+        "onboarding.sample_text",
+        {"hotkey": hotkey_label or t("onboarding.sample_hotkey_default")},
+    )
 
 
 def activation_failure_recovery_message(
@@ -218,19 +224,15 @@ def activation_failure_recovery_message(
     failure = str(failure or "").strip()
     if not failure:
         return None
-    hotkey = hotkey_label or "the read hotkey"
-    return (
-        f"{failure} To retry, select text and press {hotkey} again. "
-        "If that app blocks copying, try a browser, document, or text field, "
-        "or use Play sample."
-    )
+    hotkey = hotkey_label or t("onboarding.sample_hotkey_default")
+    return t("onboarding.recovery", {"failure": failure, "hotkey": hotkey})
 
 
 def _display_voice_name(filename: str | None) -> str:
     name = Path(filename or "").name
     if name.endswith(".onnx"):
         name = name[:-5]
-    return name or "not installed"
+    return name or t("onboarding.readiness.voice_not_installed")
 
 
 def default_piper_voice() -> PiperVoice:
@@ -257,10 +259,10 @@ def build_activation_readiness(
         return FirstRunReadiness(
             status=READINESS_READY,
             engine_label=engine_name,
-            voice_label="managed by selected engine",
+            voice_label=t("onboarding.readiness.engine_selected_label"),
             hotkey_label=hotkey_label,
             can_play_sample=True,
-            message="Ready to test the selected reading engine.",
+            message=t("onboarding.readiness.engine_selected_ready"),
         )
 
     configured_voice = str(config.get("voice") or DEFAULT_CONFIG["voice"] or "")
@@ -271,37 +273,30 @@ def build_activation_readiness(
     if not Path(piper_exe).exists():
         return FirstRunReadiness(
             status=READINESS_MISSING_PIPER,
-            engine_label="Piper engine: missing",
+            engine_label=t("onboarding.readiness.engine_missing"),
             voice_label=_display_voice_name(selected_voice),
             hotkey_label=hotkey_label,
             can_play_sample=False,
-            message=(
-                "The local Piper engine is missing. Run setup.ps1 from this "
-                "checkout, or switch to another engine in Settings. Reading "
-                "is paused until a local engine is ready."
-            ),
+            message=t("onboarding.readiness.missing_piper"),
         )
 
     if not voices:
         return FirstRunReadiness(
             status=READINESS_MISSING_VOICE,
-            engine_label="Piper engine: ready",
-            voice_label="not installed",
+            engine_label=t("onboarding.readiness.engine_ready"),
+            voice_label=t("onboarding.readiness.voice_not_installed"),
             hotkey_label=hotkey_label,
             can_play_sample=False,
-            message=(
-                "No local voice is installed yet. Install the default English "
-                "voice so PipPal can speak offline. Download size: about 120 MB."
-            ),
+            message=t("onboarding.readiness.missing_voice"),
         )
 
     return FirstRunReadiness(
         status=READINESS_READY,
-        engine_label="Piper engine: ready",
+        engine_label=t("onboarding.readiness.engine_ready"),
         voice_label=_display_voice_name(selected_voice),
         hotkey_label=hotkey_label,
         can_play_sample=True,
-        message="Local voice check is ready.",
+        message=t("onboarding.readiness.ready"),
     )
 
 

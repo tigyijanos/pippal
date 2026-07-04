@@ -8,6 +8,7 @@
 import {
   U,
   API,
+  t,
   view,
   footer,
   toast,
@@ -30,27 +31,40 @@ var vmState = {
 export function renderVoiceManager() {
   return API.call("get_voice_catalogue").then(function (cat) {
     vmState.all = cat.voices;
-    document.getElementById("brand-name").textContent = "Voices";
+    document.getElementById("brand-name").textContent = t(
+      "voices.window_title",
+    );
     view.innerHTML = "";
     footer.classList.add("hidden");
 
-    var langOpts = [{ value: "__all__", label: "All languages" }].concat(
+    var langOpts = [
+      { value: "__all__", label: t("voices.filter.all_langs") },
+    ].concat(
       cat.languages.map(function (l) {
         return { value: l.code, label: l.name };
       }),
     );
     var langSel = U.select("vm-language", langOpts, vmState.lang);
+    // Option VALUES stay the English filter codes (the filter logic and the
+    // Playwright select_option() calls key off them); only the visible LABEL
+    // for the translatable "Any" bucket is localised.
+    var qualLabels = { Any: t("voices.filter.quality_any") };
     var qualSel = U.select(
       "vm-quality",
       ["Any", "high", "medium", "low", "x_low"].map(function (q) {
-        return { value: q, label: q };
+        return { value: q, label: qualLabels[q] || q };
       }),
       vmState.quality,
     );
+    var statLabels = {
+      Any: t("voices.filter.status_any"),
+      Installed: t("voices.filter.status_installed"),
+      "Not installed": t("voices.filter.status_not_installed"),
+    };
     var statSel = U.select(
       "vm-status",
       ["Any", "Installed", "Not installed"].map(function (s) {
-        return { value: s, label: s };
+        return { value: s, label: statLabels[s] || s };
       }),
       vmState.status,
     );
@@ -86,19 +100,19 @@ export function renderVoiceManager() {
       U.el("div", { class: "row" }, [
         U.el("label", {
           class: "field-label",
-          text: "Language",
+          text: t("voices.filter.lang_label"),
           style: "flex:0 0 80px;width:80px",
         }),
         langSel,
         U.el("label", {
           class: "field-label",
-          text: "Quality",
+          text: t("voices.filter.quality_label"),
           style: "flex:0 0 64px;width:64px",
         }),
         qualSel,
         U.el("label", {
           class: "field-label",
-          text: "Status",
+          text: t("voices.filter.status_label"),
           style: "flex:0 0 56px;width:56px",
         }),
         statSel,
@@ -106,7 +120,7 @@ export function renderVoiceManager() {
       U.el("div", { class: "row" }, [
         U.el("label", {
           class: "field-label",
-          text: "Search",
+          text: t("voices.filter.search_label"),
           style: "flex:0 0 80px;width:80px",
         }),
         searchInp,
@@ -121,8 +135,7 @@ export function renderVoiceManager() {
       var shown = 0;
       vmState.all.forEach(function (v) {
         if (vmState.lang !== "__all__" && v.lang !== vmState.lang) return;
-        if (vmState.quality !== "Any" && v.quality !== vmState.quality)
-          return;
+        if (vmState.quality !== "Any" && v.quality !== vmState.quality) return;
         if (vmState.status === "Installed" && !v.installed) return;
         if (vmState.status === "Not installed" && v.installed) return;
         if (vmState.q) {
@@ -137,7 +150,7 @@ export function renderVoiceManager() {
           U.el("div", {
             class: "empty",
             testid: "vm-empty",
-            text: "No voices match. Clear the filter to see everything.",
+            text: t("voices.empty"),
           }),
         );
       }
@@ -150,17 +163,17 @@ function voiceRow(v, onChanged) {
   var statusEl = U.el("span", {
     class: "vstatus" + (v.installed ? " ok" : ""),
     testid: "vm-status-" + v.id,
-    text: v.installed ? "✓ installed" : "",
+    text: v.installed ? t("voices.status.installed") : "",
   });
   var btn = U.el("button", {
     testid: "vm-action-" + v.id,
-    text: v.installed ? "Remove" : "Install",
+    text: v.installed ? t("voices.action.remove") : t("voices.action.install"),
     class: v.installed ? "danger" : "",
   });
   // Progress bar + cancel button for install.
   var voiceCancelBtn = U.el("button", {
     testid: "vm-cancel-" + v.id,
-    text: "Cancel",
+    text: t("voices.action.cancel"),
     class: "btn-secondary",
   });
   voiceCancelBtn.style.display = "none";
@@ -213,8 +226,17 @@ function voiceRow(v, onChanged) {
         if (s.done) {
           if (s.cancelled || s.error) {
             _stopInstallUI(true);
-            if (s.cancelled) toast("Voice install cancelled.");
-            else { statusEl.textContent = "failed"; statusEl.className = "vstatus err"; toast("Voice install failed: " + (s.error || "unknown error"), true); }
+            if (s.cancelled) toast(t("voices.toast.install_cancelled"));
+            else {
+              statusEl.textContent = t("voices.status.failed");
+              statusEl.className = "vstatus err";
+              toast(
+                t("voices.toast.install_failed", {
+                  error: s.error || t("voices.unknown_error"),
+                }),
+                true,
+              );
+            }
             return;
           }
           _stopInstallUI(false);
@@ -226,27 +248,37 @@ function voiceRow(v, onChanged) {
           return API.call("get_voice_catalogue").then(function (cat) {
             vmState.all = cat.voices;
             // Sync local voice object so btn click-handler sees installed=true.
-            var updated = cat.voices.find(function (cv) { return cv.id === v.id; });
-            if (updated) { Object.assign(v, updated); } else { v.installed = true; }
+            var updated = cat.voices.find(function (cv) {
+              return cv.id === v.id;
+            });
+            if (updated) {
+              Object.assign(v, updated);
+            } else {
+              v.installed = true;
+            }
             // Update only this row's UI elements in-place.
-            statusEl.textContent = "✓ installed";
+            statusEl.textContent = t("voices.status.installed");
             statusEl.className = "vstatus ok";
-            btn.textContent = "Remove";
+            btn.textContent = t("voices.action.remove");
             btn.className = "danger";
             signalInstalledVoicesChanged();
-            toast("Voice installed — open Settings to make it your active voice.");
+            toast(t("voices.toast.installed"));
           });
         }
-        setTimeout(function () { _pollVoiceInstall(taskId); }, 350);
+        setTimeout(function () {
+          _pollVoiceInstall(taskId);
+        }, 350);
       })
       .catch(function () {
-        setTimeout(function () { _pollVoiceInstall(taskId); }, 800);
+        setTimeout(function () {
+          _pollVoiceInstall(taskId);
+        }, 800);
       });
   }
 
   function doRemove() {
     btn.disabled = true;
-    statusEl.textContent = "removing…";
+    statusEl.textContent = t("voices.status.removing");
     API.call("remove_voice", v.id)
       .then(function () {
         // Re-fetch the catalogue so vmState.all reflects the removal
@@ -282,10 +314,9 @@ function voiceRow(v, onChanged) {
               signalInstalledVoicesChanged();
               onChanged();
               toast(
-                "Voice installed" +
-                  (result && result.installed
-                    ? " — open Settings to make it your active voice."
-                    : "."),
+                result && result.installed
+                  ? t("voices.toast.installed")
+                  : t("voices.toast.installed_plain"),
               );
             });
           });
@@ -295,7 +326,7 @@ function voiceRow(v, onChanged) {
       })
       .catch(function (e) {
         _stopInstallUI(false);
-        statusEl.textContent = "failed";
+        statusEl.textContent = t("voices.status.failed");
         statusEl.className = "vstatus err";
         fail(e);
       });
@@ -303,16 +334,17 @@ function voiceRow(v, onChanged) {
   voiceCancelBtn.addEventListener("click", function () {
     if (!_installTaskId) return;
     voiceCancelBtn.disabled = true;
-    voiceProgressLabel.textContent = "Cancelling…";
+    voiceProgressLabel.textContent = t("voices.toast.cancelling");
     API.call("cancel_voice_install", _installTaskId).catch(function () {});
   });
   btn.addEventListener("click", function () {
     if (v.installed) {
-      confirmDialog("Remove voice", "Remove " + v.label + "?").then(
-        function (ok) {
-          if (ok) doRemove();
-        },
-      );
+      confirmDialog(
+        t("voices.remove.confirm_title"),
+        t("voices.remove.confirm_body", { label: v.label }),
+      ).then(function (ok) {
+        if (ok) doRemove();
+      });
     } else {
       doInstall();
     }
@@ -325,15 +357,19 @@ function voiceRow(v, onChanged) {
         U.el("div", { class: "vname", text: v.label }),
         U.el("div", {
           class: "vsub",
-          text: "id: " + v.id + "   ·   " + v.quality,
+          text: t("voices.row.meta", { id: v.id, quality: v.quality }),
         }),
       ]),
       statusEl,
     ]),
     voiceProgressWrap,
-    U.el("div", {
-      class: "vm-action-row",
-      testid: "vm-row-actions-" + v.id,
-    }, [btn, voiceCancelBtn]),
+    U.el(
+      "div",
+      {
+        class: "vm-action-row",
+        testid: "vm-row-actions-" + v.id,
+      },
+      [btn, voiceCancelBtn],
+    ),
   ]);
 }

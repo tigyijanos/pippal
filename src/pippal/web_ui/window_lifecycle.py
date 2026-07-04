@@ -27,10 +27,30 @@ from typing import Any
 import webview
 
 _SURFACES: dict[str, dict[str, Any]] = {
-    "settings": {"title": "PipPal", "width": 600, "height": 760},
-    "voices": {"title": "Voices", "width": 820, "height": 640},
-    "onboarding": {"title": "PipPal", "width": 540, "height": 560},
-    "notices": {"title": "PipPal - Open-source licences", "width": 760, "height": 620},
+    "settings": {
+        "title": "PipPal",
+        "title_key": "window.settings.title",
+        "width": 600,
+        "height": 760,
+    },
+    "voices": {
+        "title": "Voices",
+        "title_key": "window.voices.title",
+        "width": 820,
+        "height": 640,
+    },
+    "onboarding": {
+        "title": "PipPal",
+        "title_key": "window.onboarding.title",
+        "width": 540,
+        "height": 560,
+    },
+    "notices": {
+        "title": "PipPal - Open-source licences",
+        "title_key": "window.notices.title",
+        "width": 760,
+        "height": 620,
+    },
     # The reader overlay / mini-player is a NORMAL opaque frameless window
     # — built the same way as the Settings window (solid dark background
     # #13151c, no transparency machinery, fully clickable).
@@ -42,6 +62,7 @@ _SURFACES: dict[str, dict[str, Any]] = {
     #   height: 200 px — header(44px) + body(flex) + footer(40px) + padding.
     "overlay": {
         "title": "PipPal",
+        "title_key": "window.overlay.title",
         "width": 560,
         "height": 200,
         "on_top": True,
@@ -51,12 +72,36 @@ _SURFACES: dict[str, dict[str, Any]] = {
 }
 
 
+def _window_title(spec: dict[str, Any]) -> str:
+    """Resolve a surface's native window title through the i18n catalog.
+
+    Falls back to the English literal in ``spec["title"]`` when the i18n
+    engine is unavailable or the key is missing. The import is deliberately
+    lazy + absolute (never a top-level ``from ..i18n`` relative import) so
+    this module stays loadable via ``windows.py``'s file-path loader, which
+    imports it with a synthetic name and NO package context.
+    """
+    default = spec.get("title", "PipPal")
+    key = spec.get("title_key")
+    if not key:
+        return default
+    try:
+        from pippal.i18n import MARKER_OPEN, t
+
+        rendered = t(key)
+    except Exception:
+        return default
+    if not rendered or rendered.startswith(MARKER_OPEN):
+        return default
+    return rendered
+
+
 def make_window(mgr: Any, surface: str, *, hidden: bool = False) -> Any:
     spec = _SURFACES.get(surface, _SURFACES["settings"])
     url = f"{mgr._base_url}/index.html?view={surface}"
     position = mgr._window_position(surface, spec)
     kwargs: dict[str, Any] = {
-        "title": spec["title"],
+        "title": _window_title(spec),
         "url": url,
         "width": spec["width"],
         "height": spec["height"],

@@ -324,6 +324,15 @@
   // anyway if catalog loading stalls, so a fetch hiccup can never leave
   // the UI permanently cloaked (zero-regression guarantee).
   var _catalogsReady = loadCatalogs();
+  // Expose the catalog-load promise so the module graph (main.js) can defer
+  // surface renderers — which call t() for their dynamic strings (T-104) —
+  // until the catalogs are actually loaded. This is stricter than waiting on
+  // the data-i18n-ready attribute, because the 3000 ms reveal watchdog below
+  // can lift the cloak (and set data-i18n-ready) BEFORE a slow catalog fetch
+  // resolves; a renderer awaiting this promise never sees the empty-catalog
+  // window and so never renders a ⟦key⟧ marker. loadCatalogs() always
+  // resolves (a failed fetch yields {}), so this can never hang the UI.
+  window.__PIPPAL_I18N_READY__ = _catalogsReady;
   Promise.all([_catalogsReady, domReady()]).then(reveal, reveal);
   setTimeout(reveal, 3000);
 })();

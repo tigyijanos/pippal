@@ -8,7 +8,7 @@
  * provided). */
 "use strict";
 
-import { U, API, view, footer, fail } from "./app-core.js";
+import { U, API, t, view, footer, fail } from "./app-core.js";
 import { closeWin } from "./overlay.js";
 
 // ------------------------------------------------------------------
@@ -26,20 +26,14 @@ export function renderOnboarding() {
 
     var title, subtitle;
     if (rd.status === "missing_piper") {
-      title = "PipPal needs a local reading engine";
-      subtitle =
-        "The tray app is running so you can repair setup or switch engines.";
+      title = t("onboarding.title.missing_piper");
+      subtitle = t("onboarding.subtitle.missing_piper");
     } else if (rd.status === "missing_voice") {
-      title = "PipPal needs a local voice";
-      subtitle =
-        "Install an offline voice before the first reading test.\n" +
-        "No account. No telemetry. No cloud TTS.";
+      title = t("onboarding.title.missing_voice");
+      subtitle = t("onboarding.subtitle.missing_voice");
     } else {
-      title = "PipPal is ready to read locally";
-      subtitle =
-        "PipPal reads selected text aloud on this PC.\n" +
-        "No account. No telemetry. No cloud TTS.\n" +
-        "Let's make sure you can hear it now.";
+      title = t("onboarding.title.ready");
+      subtitle = t("onboarding.subtitle.ready");
     }
     view.appendChild(
       U.el("div", {
@@ -54,12 +48,10 @@ export function renderOnboarding() {
     var statusEl = U.el("div", {
       class: "card-hint",
       testid: "onboarding-status",
-      text: st.is_complete
-        ? "Done. PipPal can read selected text on this PC."
-        : rd.message,
+      text: st.is_complete ? t("onboarding.status.done") : rd.message,
     });
     view.appendChild(
-      U.card("Local voice check", [
+      U.card(t("onboarding.card.voice_check"), [
         U.el("div", {
           class: "card-label",
           testid: "onboarding-engine",
@@ -67,11 +59,11 @@ export function renderOnboarding() {
         }),
         U.el("div", {
           class: "card-label",
-          text: "Voice: " + rd.voice_label,
+          text: t("onboarding.voice_label", { label: rd.voice_label }),
         }),
         U.el("div", {
           class: "card-label",
-          text: "Hotkey: " + rd.hotkey_label,
+          text: t("onboarding.hotkey_label", { label: rd.hotkey_label }),
         }),
         statusEl,
       ]),
@@ -87,10 +79,10 @@ export function renderOnboarding() {
     });
     sampleBox.value = rd.sample_text;
     view.appendChild(
-      U.card("Try it in any app", [
+      U.card(t("onboarding.card.try_it"), [
         U.el("div", {
           class: "card-label",
-          text: "Select text in a browser, PDF, document, or this box.",
+          text: t("onboarding.try_hint"),
         }),
         U.el("div", { style: "height:8px" }),
         sampleBox,
@@ -111,15 +103,22 @@ export function renderOnboarding() {
     }
 
     if (rd.status === "missing_piper") {
-      actions.appendChild(btn("Close", "onboarding-close", false, closeWin));
       actions.appendChild(
-        btn("Open Settings", "onboarding-open-settings", false, function () {
-          API.call("open_settings_window").catch(fail);
-        }),
+        btn(t("onboarding.btn.close"), "onboarding-close", false, closeWin),
       );
       actions.appendChild(
         btn(
-          "Open setup instructions",
+          t("onboarding.btn.open_settings"),
+          "onboarding-open-settings",
+          false,
+          function () {
+            API.call("open_settings_window").catch(fail);
+          },
+        ),
+      );
+      actions.appendChild(
+        btn(
+          t("onboarding.btn.open_setup"),
           "onboarding-open-setup",
           true,
           function () {
@@ -168,28 +167,39 @@ export function renderOnboarding() {
               odvProgressWrap.style.display = "none";
               if (installBtn) installBtn.disabled = false;
               if (s.error || s.cancelled) {
-                statusEl.textContent = s.cancelled ? "Install cancelled." : "Install failed.";
+                statusEl.textContent = s.cancelled
+                  ? t("onboarding.install.cancelled")
+                  : t("onboarding.install.failed");
                 return;
               }
               return renderOnboarding();
             }
-            setTimeout(function () { _pollDefaultVoiceInstall(taskId, installBtn); }, 350);
+            setTimeout(function () {
+              _pollDefaultVoiceInstall(taskId, installBtn);
+            }, 350);
           })
           .catch(function () {
-            setTimeout(function () { _pollDefaultVoiceInstall(taskId, installBtn); }, 800);
+            setTimeout(function () {
+              _pollDefaultVoiceInstall(taskId, installBtn);
+            }, 800);
           });
       }
 
       actions.appendChild(
-        btn("Skip for now", "onboarding-skip", false, closeWin),
+        btn(t("onboarding.btn.skip"), "onboarding-skip", false, closeWin),
       );
       actions.appendChild(
-        btn("Open Voice Manager", "onboarding-open-vm", false, function () {
-          API.call("open_voice_manager_window").catch(fail);
-        }),
+        btn(
+          t("onboarding.btn.open_vm"),
+          "onboarding-open-vm",
+          false,
+          function () {
+            API.call("open_voice_manager_window").catch(fail);
+          },
+        ),
       );
       var odvInstallBtn = btn(
-        "Install default voice",
+        t("onboarding.btn.install_voice"),
         "onboarding-install-voice",
         true,
         function () {
@@ -197,17 +207,16 @@ export function renderOnboarding() {
           statusEl.textContent = "";
           odvProgressWrap.style.display = "";
           odvProgressFill.style.width = "0%";
-          odvProgressLabel.textContent = "Starting…";
+          odvProgressLabel.textContent = t("onboarding.install.starting");
           // Use async path for progress feedback.
           API.call("install_default_voice_async")
             .then(function (r) {
               if (!r || !r.task_id) {
                 // Fallback: no async support — sync path (no progress)
-                return API.call("install_default_voice")
-                  .then(function () {
-                    odvProgressWrap.style.display = "none";
-                    return renderOnboarding();
-                  });
+                return API.call("install_default_voice").then(function () {
+                  odvProgressWrap.style.display = "none";
+                  return renderOnboarding();
+                });
               }
               _pollDefaultVoiceInstall(r.task_id, odvInstallBtn);
             })
@@ -236,7 +245,7 @@ export function renderOnboarding() {
       );
       var played = { v: false };
       var finishBtn = btn(
-        st.is_complete ? "Close" : "Finish setup",
+        st.is_complete ? t("onboarding.btn.close") : t("onboarding.btn.finish"),
         "onboarding-finish",
         st.is_complete,
         function () {
@@ -245,14 +254,12 @@ export function renderOnboarding() {
             return;
           }
           if (!played.v) {
-            statusEl.textContent =
-              "Play the sample first, then confirm you heard it.";
+            statusEl.textContent = t("onboarding.play_first");
             return;
           }
           API.call("mark_activation_complete")
             .then(function () {
-              statusEl.textContent =
-                "Done. PipPal can read selected text on this PC.";
+              statusEl.textContent = t("onboarding.status.done");
               setTimeout(closeWin, 900);
             })
             .catch(fail);
@@ -260,7 +267,9 @@ export function renderOnboarding() {
       );
       if (!st.is_complete) finishBtn.disabled = true;
       var playBtn = btn(
-        st.is_complete ? "Play sample again" : "Play sample",
+        st.is_complete
+          ? t("onboarding.btn.play_again")
+          : t("onboarding.btn.play"),
         "onboarding-play-sample",
         !st.is_complete,
         function () {
@@ -269,8 +278,8 @@ export function renderOnboarding() {
               played.v = true;
               finishBtn.disabled = false;
               statusEl.textContent = st.is_complete
-                ? "Playing sample again. PipPal is already set up."
-                : "Playing sample. If you can hear it, finish setup.";
+                ? t("onboarding.playing_again")
+                : t("onboarding.playing");
             })
             .catch(fail);
         },

@@ -10,6 +10,7 @@
 import {
   U,
   API,
+  t,
   view,
   footer,
   fail,
@@ -20,25 +21,28 @@ import {
 // Playful loading messages — whimsical, fake-technical lines in
 // the charming STYLE of classic life-sim loading screens, tailored to
 // a text-to-speech READER. ORIGINAL strings (no trademarked phrases).
-// The UI language is English (cf. "PipPal", "Loading…"), so these
-// are English. They rotate while the overlay is in the loading/thinking
-// state; see the rotation logic in tick() below.
+// They rotate while the overlay is in the loading/thinking state; see
+// the rotation logic in tick() below.
+//
+// T-104: the lines are now catalog KEYS, resolved through t() at
+// display time (English values live in webui/i18n/en.json under
+// overlay.loading.*; other languages + width budget land in T-106).
 // ------------------------------------------------------------------
 var LOADING_MESSAGES = [
-  "Warming up the vocal cords…",
-  "Reticulating syllables…",
-  "Teaching the narrator to breathe…",
-  "Summoning the perfect voice…",
-  "Untangling the sentences…",
-  "Polishing the consonants…",
-  "Brewing a fresh batch of phonemes…",
-  "Tuning the inner monologue…",
-  "Coaxing vowels into formation…",
-  "Rehearsing the dramatic pauses…",
-  "Buffering a little eloquence…",
-  "Smoothing out the syllables…",
-  "Calibrating the storyteller…",
-  "Gathering the right intonation…",
+  "overlay.loading.warmup",
+  "overlay.loading.reticulating",
+  "overlay.loading.breathe",
+  "overlay.loading.summoning",
+  "overlay.loading.untangling",
+  "overlay.loading.polishing",
+  "overlay.loading.brewing",
+  "overlay.loading.tuning",
+  "overlay.loading.vowels",
+  "overlay.loading.pauses",
+  "overlay.loading.buffering",
+  "overlay.loading.smoothing",
+  "overlay.loading.calibrating",
+  "overlay.loading.intonation",
 ];
 // Each rotating message is shown for this long before advancing.
 var LOADING_ROTATE_MS = 1800;
@@ -47,7 +51,7 @@ var loadingMsgBase = Math.floor(Math.random() * LOADING_MESSAGES.length);
 function currentLoadingMessage() {
   var step = Math.floor(Date.now() / LOADING_ROTATE_MS);
   var idx = (loadingMsgBase + step) % LOADING_MESSAGES.length;
-  return LOADING_MESSAGES[idx];
+  return t(LOADING_MESSAGES[idx]);
 }
 
 function escapeLoadingText(s) {
@@ -87,7 +91,10 @@ export function renderOverlay() {
   // drag even with easy_drag=False — same as Settings titlebar in index.html.
   var dragRegion = U.el(
     "span",
-    { class: "overlay-drag-region pywebview-drag-region", testid: "overlay-drag-region" },
+    {
+      class: "overlay-drag-region pywebview-drag-region",
+      testid: "overlay-drag-region",
+    },
     [U.el("img", { src: "assets/pippal_icon.png" }), dot, label],
   );
   var closeBtn = U.el("button", {
@@ -142,16 +149,12 @@ export function renderOverlay() {
   // next  (⏭): filled triangle pointing right + bar on right
   // close (✕): thin X
   var ICONS = {
-    prev:
-      "M2 3h1.5v10H2V3zm10.5 1.06L6.06 8l6.44 3.94V4.06z",
+    prev: "M2 3h1.5v10H2V3zm10.5 1.06L6.06 8l6.44 3.94V4.06z",
     replay:
       "M8 2.5a5.5 5.5 0 1 0 5.5 5.5h-1.5A4 4 0 1 1 8 4v1.5l3-2.25L8 1V2.5z",
-    pause:
-      "M4 3h2.5v10H4V3zm5.5 0H12v10H9.5V3z",
-    play:
-      "M4 3.06v9.88L13 8 4 3.06z",
-    next:
-      "M12.5 3H14v10h-1.5V3zM3.5 4.06v7.88L9.94 8 3.5 4.06z",
+    pause: "M4 3h2.5v10H4V3zm5.5 0H12v10H9.5V3z",
+    play: "M4 3.06v9.88L13 8 4 3.06z",
+    next: "M12.5 3H14v10h-1.5V3zM3.5 4.06v7.88L9.94 8 3.5 4.06z",
     close:
       "M3.22 3.22a.75.75 0 0 1 1.06 0L8 6.94l3.72-3.72a.75.75 0 1 1 1.06 1.06L9.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L8 9.06l-3.72 3.72a.75.75 0 0 1-1.06-1.06L6.94 8 3.22 4.28a.75.75 0 0 1 0-1.06z",
   };
@@ -199,17 +202,22 @@ export function renderOverlay() {
   // element has focus.
   // Guard: document.addEventListener may not exist in node/JSDOM test harnesses.
   if (typeof document.addEventListener === "function") {
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !panel.classList.contains("hidden")) {
-        API.call("overlay_action", "close").catch(fail);
-      }
-    }, true);
+    document.addEventListener(
+      "keydown",
+      function (e) {
+        if (e.key === "Escape" && !panel.classList.contains("hidden")) {
+          API.call("overlay_action", "close").catch(fail);
+        }
+      },
+      true,
+    );
   }
-  var panel = U.el(
-    "div",
-    { class: "overlay-panel", testid: "overlay-panel" },
-    [head, loadingEl, bodyEl, progress],
-  );
+  var panel = U.el("div", { class: "overlay-panel", testid: "overlay-panel" }, [
+    head,
+    loadingEl,
+    bodyEl,
+    progress,
+  ]);
   view.appendChild(panel);
 
   // Karaoke colour stops + fade — a faithful port of overlay_paint.py
@@ -285,10 +293,8 @@ export function renderOverlay() {
         var st = s.overlay_state || "idle";
         document.body.setAttribute("data-overlay-state", st);
         var koff =
-          parseInt(
-            s.karaoke_offset_ms != null ? s.karaoke_offset_ms : 0,
-            10,
-          ) / 1000.0;
+          parseInt(s.karaoke_offset_ms != null ? s.karaoke_offset_ms : 0, 10) /
+          1000.0;
         if (st === "idle") {
           setVisible(false);
           loadingEl.classList.add("hidden");
@@ -452,6 +458,6 @@ export function renderOverlay() {
 
 export function closeWin() {
   API.call("close_window").catch(function (e) {
-    return handleCloseWindowFailure("Could not close window.", e);
+    return handleCloseWindowFailure(t("errors.close_window"), e);
   });
 }
