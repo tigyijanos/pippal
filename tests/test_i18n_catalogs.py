@@ -183,6 +183,28 @@ def test_translated_not_equal_en_outside_allowlist(lang: str, catalogs):
 
 
 @pytest.mark.parametrize("lang", NON_EN)
+def test_overlay_loading_within_width_budget(lang: str, catalogs):
+    """Character-level width oracle for the whimsical overlay loading lines: no
+    translated ``overlay.loading.*`` value may exceed the English length + 20 %
+    (chars). The overlay panel is ~560 px and these lines rotate in place, so
+    German/pt-BR expansion is the layout risk. This locks the budget in the
+    catalog; T-106 adds pixel-level (scrollWidth) guards on top."""
+    cat = catalogs[lang]
+    overflows = {}
+    for k in EN_KEYS:
+        if not k.startswith("overlay.loading."):
+            continue
+        budget = len(EN[k]) * 1.2
+        length = len(cat[k])
+        if length > budget:
+            overflows[k] = (length, round(budget, 1))
+    assert not overflows, (
+        f"{lang}: overlay loading lines over en+20% budget "
+        f"(len, budget): {overflows}"
+    )
+
+
+@pytest.mark.parametrize("lang", NON_EN)
 def test_meta_block(lang: str, catalogs):
     meta = catalogs[lang].get("_meta", {})
     assert meta.get("lang") == lang, f"{lang}: _meta.lang != filename tag"
