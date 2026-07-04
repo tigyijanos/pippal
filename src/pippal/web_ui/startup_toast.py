@@ -19,6 +19,8 @@ import os
 import threading
 from typing import Any
 
+from ..i18n import t
+
 # Delay (ms) from tray-icon ready to notification appearing.
 _DELAY_MS = 200
 
@@ -31,7 +33,7 @@ def _display_toast(icon: Any = None) -> None:
     """
     if icon is None:
         return
-    icon.notify("Running in the background", "PipPal")
+    icon.notify(t("toast.startup.title"), "PipPal")
 
 
 def show_startup_toast(icon: Any = None) -> None:

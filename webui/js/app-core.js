@@ -16,6 +16,12 @@
 
 export var U = window.UI;
 export var API = window.PipPalAPI;
+// i18n translate helper (T-101 engine, defined by the blocking classic
+// js/i18n.js in <head> before this module graph evaluates). Re-exported
+// from the single app-core seam so every surface module calls the same
+// window.t(key, params) contract. window.t is stable (never reassigned),
+// so capturing the reference here is safe.
+export var t = window.t;
 export var view = document.getElementById("view");
 export var footer = document.getElementById("footer");
 var toastEl = document.getElementById("toast");
@@ -115,7 +121,6 @@ document
   .getElementById("btn-window-close")
   .addEventListener("click", function () {
     API.call("close_window").catch(function (e) {
-      return handleCloseWindowFailure("Could not close window.", e);
+      return handleCloseWindowFailure(t("errors.close_window"), e);
     });
   });
-

@@ -4,6 +4,7 @@
 import {
   U,
   API,
+  t,
   view,
   footer,
   toast,
@@ -18,7 +19,7 @@ import { ctxText } from "./settings-footer.js";
 // ------------------------------------------------------------------
 // Promotional URLs — kept as named constants for clarity and testability.
 // ------------------------------------------------------------------
-var STORE_URL  = "https://apps.microsoft.com/detail/9p0jx4n42nsl";
+var STORE_URL = "https://apps.microsoft.com/detail/9p0jx4n42nsl";
 // The Reddit community URL is intentionally NOT rendered in the promo banner —
 // it already appears in the About card (about_info links, key "reddit").
 // Keeping it as a constant for reference / test tooling only.
@@ -92,7 +93,7 @@ export function renderSettings() {
       ? voices.map(function (v) {
           return { value: v, label: v };
         })
-      : [{ value: "", label: "(no voice installed)" }];
+      : [{ value: "", label: t("settings.voice.none") }];
     var voiceSel = U.select(
       "settings-voice",
       piperVoiceOpts,
@@ -105,7 +106,9 @@ export function renderSettings() {
 
     var manageBtn = U.el("button", {
       testid: "settings-manage-voices",
-      text: voices.length ? "Manage…" : "Install voices…",
+      text: voices.length
+        ? t("settings.voice.manage")
+        : t("settings.voice.install_voices"),
     });
     manageBtn.addEventListener("click", function () {
       API.call("open_voice_manager_window").catch(fail);
@@ -114,13 +117,16 @@ export function renderSettings() {
       class: "card-hint",
       testid: "settings-engine-hint",
       text: voices.length
-        ? "Piper voice. Click Manage to install more from the curated list."
-        : "No Piper voice installed yet. Click Install voices to download one.",
+        ? t("settings.voice.hint_installed")
+        : t("settings.voice.hint_empty"),
     });
-    var voiceCard = U.card("Voice", [
-      U.fieldRow("Engine", engineSel),
+    var voiceCard = U.card(t("settings.voice.title"), [
+      U.fieldRow(t("settings.voice.engine_label"), engineSel),
       U.el("div", { class: "row", testid: "settings-voice-row" }, [
-        U.el("label", { class: "field-label", text: "Voice" }),
+        U.el("label", {
+          class: "field-label",
+          text: t("settings.voice.voice_label"),
+        }),
         voiceSel,
         manageBtn,
       ]),
@@ -137,11 +143,13 @@ export function renderSettings() {
           if (token !== piperVoiceRefreshToken) return;
           voices = Array.isArray(freshVoices) ? freshVoices : [];
           manageBtn.textContent = voices.length
-            ? "Manage…"
-            : "Install voices…";
+            ? t("settings.voice.manage")
+            : t("settings.voice.install_voices");
           var newOpts = voices.length
-            ? voices.map(function (v) { return { value: v, label: v }; })
-            : [{ value: "", label: "(no voice installed)" }];
+            ? voices.map(function (v) {
+                return { value: v, label: v };
+              })
+            : [{ value: "", label: t("settings.voice.none") }];
           var currentVal = voiceSel.value;
           while (voiceSel.firstChild) voiceSel.removeChild(voiceSel.firstChild);
           newOpts.forEach(function (opt) {
@@ -153,8 +161,8 @@ export function renderSettings() {
           });
           voiceSel.disabled = !voices.length;
           engineHint.textContent = voices.length
-            ? "Piper voice. Click Manage to install more from the curated list."
-            : "No Piper voice installed yet. Click Install voices to download one.";
+            ? t("settings.voice.hint_installed")
+            : t("settings.voice.hint_empty");
         })
         .catch(fail);
     }
@@ -179,7 +187,7 @@ export function renderSettings() {
 
     // ---- Speech card ----
     var speed = U.sliderRow(
-      "Speed",
+      t("settings.speech.speed_label"),
       "settings-speed",
       0.6,
       1.7,
@@ -190,7 +198,7 @@ export function renderSettings() {
       },
     );
     var noise = U.sliderRow(
-      "Variation",
+      t("settings.speech.variation_label"),
       "settings-noise",
       0.3,
       1.0,
@@ -202,13 +210,10 @@ export function renderSettings() {
     );
     settingsState.controls.speed = speed.slider;
     settingsState.controls.noise_scale = noise.slider;
-    var speechCard = U.card("Speech", [
+    var speechCard = U.card(t("settings.speech.title"), [
       speed.node,
       noise.node,
-      U.hint(
-        "Speed: 0.6\xd7 clearer \xb7 1.0\xd7 normal \xb7 1.7\xd7 faster.   " +
-          "Variation: livelier intonation at higher values.",
-      ),
+      U.hint(t("settings.speech.hint")),
     ]);
 
     // ---- Hotkeys card ----
@@ -223,60 +228,54 @@ export function renderSettings() {
       settingsState.controls[key] = inp;
       hkRows.push(U.fieldRow(label, inp));
     });
-    hkRows.push(
-      U.hint(
-        "Format: windows+shift+r \xb7 ctrl+alt+space \xb7 " +
-          "alt+shift+f1 …  Captured combos are suppressed (other apps " +
-          "won't also see them).",
-      ),
-    );
-    var hotkeysCard = U.card("Hotkeys", hkRows);
+    hkRows.push(U.hint(t("settings.hotkeys.hint")));
+    var hotkeysCard = U.card(t("settings.hotkeys.title"), hkRows);
 
     // ---- Reader panel card ----
     var showPanel = U.checkRow(
       "settings-show_overlay",
-      "Show panel while reading",
+      t("settings.panel.show_overlay"),
       cfg.show_overlay,
     );
     var showText = U.checkRow(
       "settings-show_text_in_overlay",
-      "Show text with karaoke highlight",
+      t("settings.panel.show_text"),
       cfg.show_text_in_overlay,
     );
     settingsState.controls.show_overlay = showPanel.querySelector("input");
     settingsState.controls.show_text_in_overlay =
       showText.querySelector("input");
     var autoHide = U.spinRow(
-      "Auto-hide delay",
+      t("settings.panel.auto_hide_label"),
       "settings-auto_hide_ms",
       300,
       8000,
       100,
       cfg.auto_hide_ms != null ? cfg.auto_hide_ms : 1500,
-      "ms",
+      t("settings.panel.auto_hide_unit"),
     );
     var distance = U.spinRow(
-      "Distance from taskbar",
+      t("settings.panel.distance_label"),
       "settings-overlay_y_offset",
       20,
       600,
       10,
       cfg.overlay_y_offset != null ? cfg.overlay_y_offset : 100,
-      "px",
+      t("settings.panel.distance_unit"),
     );
     var karaoke = U.spinRow(
-      "Karaoke offset",
+      t("settings.panel.karaoke_label"),
       "settings-karaoke_offset_ms",
       -300,
       600,
       20,
       cfg.karaoke_offset_ms != null ? cfg.karaoke_offset_ms : 120,
-      "ms (positive = highlight waits, negative = highlight leads)",
+      t("settings.panel.karaoke_unit"),
     );
     settingsState.controls.auto_hide_ms = autoHide.input;
     settingsState.controls.overlay_y_offset = distance.input;
     settingsState.controls.karaoke_offset_ms = karaoke.input;
-    var panelCard = U.card("Reader panel", [
+    var panelCard = U.card(t("settings.panel.title"), [
       showPanel,
       showText,
       autoHide.node,
@@ -292,18 +291,18 @@ export function renderSettings() {
     });
     var installBtn = U.el("button", {
       testid: "settings-ctx-install",
-      text: "Install",
+      text: t("settings.integration.install"),
     });
     var removeBtn = U.el("button", {
       class: "danger",
       testid: "settings-ctx-remove",
-      text: "Remove",
+      text: t("settings.integration.remove"),
     });
     installBtn.addEventListener("click", function () {
       API.call("install_context_menu")
         .then(function (st) {
           ctxStatusEl.textContent = ctxText(st);
-          toast("Right-click entry installed for .txt and .md.");
+          toast(t("settings.integration.installed_toast"));
         })
         .catch(fail);
     });
@@ -314,12 +313,9 @@ export function renderSettings() {
         })
         .catch(fail);
     });
-    var intCard = U.card("Windows integration", [
+    var intCard = U.card(t("settings.integration.title"), [
       ctxStatusEl,
-      U.hint(
-        "Adds a 'Read with PipPal' entry to the right-click menu of " +
-          ".txt and .md files in File Explorer (current user only).",
-      ),
+      U.hint(t("settings.integration.hint")),
       U.el("div", { class: "row", style: "margin-top:8px" }, [
         installBtn,
         removeBtn,
@@ -335,17 +331,13 @@ export function renderSettings() {
     // ---- Open-source notices card ----
     var noticesBtn = U.el("button", {
       testid: "settings-view-licences",
-      text: "View licences…",
+      text: t("settings.notices.view"),
     });
     noticesBtn.addEventListener("click", function () {
       API.call("open_notices_window").catch(fail);
     });
-    var noticesCard = U.card("Open-source notices", [
-      U.hint(
-        "PipPal uses open-source libraries and local TTS runtime " +
-          "artifacts. Their licences are included with this install or " +
-          "source checkout.",
-      ),
+    var noticesCard = U.card(t("settings.notices.title"), [
+      U.hint(t("settings.notices.hint")),
       U.el("div", { class: "row", style: "margin-top:8px" }, [noticesBtn]),
     ]);
 
@@ -365,7 +357,7 @@ export function renderSettings() {
         return a;
       }),
     );
-    var aboutCard = U.card("About", [
+    var aboutCard = U.card(t("settings.about.title"), [
       U.el("div", {
         class: "card-label",
         style: "font-family:var(--font-semibold)",
@@ -374,12 +366,12 @@ export function renderSettings() {
       }),
       U.el("div", {
         class: "card-hint",
-        text: "Your little offline reading buddy.",
+        text: t("settings.about.tagline"),
       }),
       U.el("div", {
         class: "card-hint",
         style: "margin-top:8px",
-        text: "© 2026 Bug Factory Kft.  \xb7  Offline-first by design.",
+        text: t("settings.about.copyright"),
       }),
       linkRow,
     ]);
@@ -390,21 +382,30 @@ export function renderSettings() {
     //       caused it to be shown twice to the user.
     var promoGetProBtn = U.el("button", {
       testid: "promo-get-pro",
-      text: "Get PipPal Pro",
+      text: t("promo.get_pro"),
     });
     promoGetProBtn.classList.add("primary");
     promoGetProBtn.addEventListener("click", function () {
       API.call("open_url", STORE_URL).catch(fail);
     });
 
-    var promoCard = U.el("div", { testid: "settings-promo", class: "settings-promo" }, [
-      U.el("div", { class: "promo-pro-cta" }, [
-        U.el("div", { class: "promo-pro-headline", text: "Unlock PipPal Pro" }),
-        U.el("div", { class: "promo-pro-sub",
-          text: "AI summaries, premium neural voices, document import, and more." }),
-        promoGetProBtn,
-      ]),
-    ]);
+    var promoCard = U.el(
+      "div",
+      { testid: "settings-promo", class: "settings-promo" },
+      [
+        U.el("div", { class: "promo-pro-cta" }, [
+          U.el("div", {
+            class: "promo-pro-headline",
+            text: t("promo.headline"),
+          }),
+          U.el("div", {
+            class: "promo-pro-sub",
+            text: t("promo.sub"),
+          }),
+          promoGetProBtn,
+        ]),
+      ],
+    );
 
     view.appendChild(promoCard);
     view.appendChild(voiceCard);
