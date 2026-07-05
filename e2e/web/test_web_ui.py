@@ -40,6 +40,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect
 
+# i18n oracle (T-301): assert rendered UI text against the shipped English
+# catalog, never a hardcoded literal, so the suite stays language-agnostic.
+_WEBUI = Path(__file__).resolve().parents[2] / "webui"
+EN = json.loads((_WEBUI / "i18n" / "en.json").read_text("utf-8"))
+
 
 def _config_on_disk(profile: Path) -> dict:
     cfg = profile / "config.json"
@@ -232,7 +237,8 @@ def test_settings_edit_persists_to_backend(page: Page, app_url: str, backend, st
         "el => { el.value = '1.25';"
         " el.dispatchEvent(new Event('input', {bubbles:true})); }"
     )
-    expect(page.get_by_test_id("settings-speed-value")).to_have_text("1.25×")
+    speed_label = f"{1.25:.2f}×"  # settings.js renders v.toFixed(2) + the multiplier sign
+    expect(page.get_by_test_id("settings-speed-value")).to_have_text(speed_label)
     step.check("speed value label shows 1.25×")
 
     step("set auto_hide_ms = 2400")
@@ -354,7 +360,7 @@ def test_reset_confirm_modal_gates_the_form(page: Page, app_url: str, backend, s
     step("click Reset to defaults")
     page.get_by_test_id("settings-reset").click()
     expect(page.get_by_test_id("confirm-modal")).to_be_visible()
-    expect(page.get_by_test_id("confirm-title")).to_have_text("Reset to defaults")
+    expect(page.get_by_test_id("confirm-title")).to_have_text(EN["settings.reset.confirm_title"])
     expect(auto_hide).to_have_value("5000")  # gate held
     step.check('confirm modal shown ("Reset to defaults"); field still 5000 (gate held)')
 
@@ -395,14 +401,14 @@ def test_voice_remove_confirm_modal_gates_deletion(
     try:
         _goto(page, app_url, "voices", step)
         row_btn = page.get_by_test_id("vm-action-en_US-ryan-high")
-        expect(row_btn).to_have_text("Remove")  # catalogue sees it installed
+        expect(row_btn).to_have_text(EN["voices.action.remove"])  # catalogue sees it installed
         step.check("catalogue row shows 'Remove' (sees it installed)")
 
         # Click Remove → modal appears, files still on disk (gate held).
         step("click Remove on en_US-ryan-high")
         row_btn.click()
         expect(page.get_by_test_id("confirm-modal")).to_be_visible()
-        expect(page.get_by_test_id("confirm-title")).to_have_text("Remove voice")
+        expect(page.get_by_test_id("confirm-title")).to_have_text(EN["voices.remove.confirm_title"])
         expect(page.get_by_test_id("confirm-body")).to_contain_text("Remove")
         assert onnx.exists() and sidecar.exists()
         step.check("confirm modal shown; both files still on disk (gate held)")

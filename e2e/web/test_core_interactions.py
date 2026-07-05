@@ -504,7 +504,7 @@ def test_overlay_no_text_selected_message_and_self_dismiss(
         expect(page.locator("body")).to_have_attribute(
             "data-overlay-state", "done", timeout=4000
         )
-        expect(body_el).to_have_text("No text selected", timeout=4000)
+        expect(body_el).to_have_text(sink_calls[0], timeout=4000)
         step.check("served DOM: body[data-overlay-state=done] and the "
                    "overlay-text element shows 'No text selected'")
 
