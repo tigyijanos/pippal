@@ -150,6 +150,15 @@
   "overlay.loading.smoothing": "Згладжуємо склади…",
   "overlay.loading.calibrating": "Калібруємо оповідача…",
   "overlay.loading.intonation": "Добираємо правильну інтонацію…",
+  "overlay.msg.no_text_selected": "Текст не виділено",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "У черзі — {count} очікує",
+    "few": "У черзі — {count} очікують",
+    "many": "У черзі — {count} очікують",
+    "other": "У черзі — {count} очікує"
+  },
+  "overlay.msg.synthesis_failed": "Помилка синтезу",
 
   "voices.window_title": "Голоси",
   "voices.filter.all_langs": "Усі мови",

@@ -144,6 +144,12 @@
   "overlay.loading.smoothing": "正在抚平音节…",
   "overlay.loading.calibrating": "正在校准讲述者…",
   "overlay.loading.intonation": "正在收集恰当的语调…",
+  "overlay.msg.no_text_selected": "未选择文本",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "other": "队列中 — 剩余 {count} 项"
+  },
+  "overlay.msg.synthesis_failed": "合成失败",
 
   "voices.window_title": "语音",
   "voices.filter.all_langs": "所有语言",

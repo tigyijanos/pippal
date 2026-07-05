@@ -146,6 +146,13 @@
   "overlay.loading.smoothing": "Smoothing out the syllables…",
   "overlay.loading.calibrating": "Calibrating the storyteller…",
   "overlay.loading.intonation": "Gathering the right intonation…",
+  "overlay.msg.no_text_selected": "No text selected",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "Queued — {count} pending",
+    "other": "Queued — {count} pending"
+  },
+  "overlay.msg.synthesis_failed": "Synthesis failed",
 
   "voices.window_title": "Voices",
   "voices.filter.all_langs": "All languages",
