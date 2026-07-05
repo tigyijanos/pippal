@@ -27,6 +27,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect
 
+# i18n oracle (T-301): assert rendered UI text against the shipped English
+# catalog, never a hardcoded literal, so the suite stays language-agnostic.
+_WEBUI = Path(__file__).resolve().parents[2] / "webui"
+EN = json.loads((_WEBUI / "i18n" / "en.json").read_text("utf-8"))
+
 
 def _config_on_disk(profile: Path) -> dict:
     cfg = profile / "config.json"
@@ -367,7 +372,7 @@ def test_settings_voice_card_empty_install_state(
     step.check("real backend state: installed_voices() == []")
     _goto(page, app_url, "settings", step)
     expect(page.get_by_test_id("settings-manage-voices")).to_have_text(
-        "Install voices…"
+        EN["settings.voice.install_voices"]
     )
     expect(page.get_by_test_id("settings-voice")).to_be_disabled()
     expect(page.get_by_test_id("settings-engine-hint")).to_contain_text(
@@ -389,7 +394,8 @@ def test_settings_variation_slider_reflects_and_persists(
         "el => { el.value = '0.85';"
         " el.dispatchEvent(new Event('input', {bubbles:true})); }"
     )
-    expect(page.get_by_test_id("settings-noise-value")).to_have_text("0.85")
+    noise_label = f"{0.85:.2f}"  # settings.js renders v.toFixed(2)
+    expect(page.get_by_test_id("settings-noise-value")).to_have_text(noise_label)
     step.check("noise value label shows 0.85")
     step("click Save")
     page.get_by_test_id("settings-save").click()
@@ -648,7 +654,7 @@ def test_settings_save_persists_with_saved_toast(
     page.get_by_test_id("settings-save").click()
 
     toast = page.get_by_test_id("toast")
-    expect(toast).to_have_text("Saved.")
+    expect(toast).to_have_text(EN["settings.save.saved"])
     assert _config_on_disk(backend["profile"]).get("auto_hide_ms") == 3300
     assert backend["config"]["auto_hide_ms"] == 3300
     step.check('Save → "Saved." toast; auto_hide_ms == 3300 on disk + live config')
@@ -657,7 +663,7 @@ def test_settings_save_persists_with_saved_toast(
     step("set auto_hide_ms = 3400, then click Apply")
     page.get_by_test_id("settings-auto_hide_ms").fill("3400")
     page.get_by_test_id("settings-apply").click()
-    expect(toast).to_have_text("Applied.")
+    expect(toast).to_have_text(EN["settings.save.applied"])
     assert _config_on_disk(backend["profile"]).get("auto_hide_ms") == 3400
     step.check('Apply → "Applied." toast; auto_hide_ms == 3400 on disk')
 
@@ -764,7 +770,7 @@ def test_voice_manager_row_install_real_effect(
     cat = backend["bridge"].get_voice_catalogue()
     vid = cat["voices"][0]["id"]
     btn = page.get_by_test_id(f"vm-action-{vid}")
-    expect(btn).to_have_text("Install")
+    expect(btn).to_have_text(EN["voices.action.install"])
     step(f"click per-row Install for {vid} (real installer, stubbed download)")
     btn.click()
 
