@@ -98,22 +98,46 @@ def _resolve_dir(catalog_directory: Path | str | None) -> Path:
 # --------------------------------------------------------------------------
 # Supported-language discovery (dynamic — no hardcoded registry)
 # --------------------------------------------------------------------------
+def _catalog_is_hidden(path: Path) -> bool:
+    """True when a catalog opts out of discovery via ``_meta.hidden``.
+
+    Build/test-only catalogs — notably the ``en-XA`` pseudo-locale (T-305) —
+    ship a real ``<tag>.json`` file so :func:`load_catalog` can still read them,
+    but set ``"hidden": true`` in their ``_meta`` so they never enter
+    ``SUPPORTED_LANGS`` and thus never surface in the Settings language picker.
+    A malformed/unreadable file is treated as NOT hidden, preserving the
+    historical "any ``*.json`` is a language" discovery behaviour.
+    """
+    try:
+        with path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return False
+    meta = data.get("_meta") if isinstance(data, dict) else None
+    return bool(isinstance(meta, dict) and meta.get("hidden"))
+
+
 def discover_langs(catalog_directory: Path | str | None = None) -> list[str]:
     """Return the supported language tags by scanning ``*.json`` catalog files.
 
     The tag is the filename stem. Files whose stem starts with ``_`` (private
-    fixtures/meta) are ignored. English is always listed first (it is the
-    universal fallback); the rest are sorted for determinism. A missing
-    directory yields ``["en"]`` — English is always nominally supported so the
-    fallback chain and ``t()`` never blow up on a fresh tree.
+    fixtures/meta) are ignored, as are catalogs that opt out via
+    ``_meta.hidden`` (build-only pseudo-locales, e.g. ``en-XA``). English is
+    always listed first (it is the universal fallback); the rest are sorted for
+    determinism. A missing directory yields ``["en"]`` — English is always
+    nominally supported so the fallback chain and ``t()`` never blow up on a
+    fresh tree.
     """
     directory = _resolve_dir(catalog_directory)
     langs: set[str] = set()
     if directory.is_dir():
         for path in directory.glob("*.json"):
             stem = path.stem
-            if stem and not stem.startswith("_"):
-                langs.add(stem)
+            if not stem or stem.startswith("_"):
+                continue
+            if _catalog_is_hidden(path):
+                continue
+            langs.add(stem)
     langs.add(DEFAULT_LANG)
     return [DEFAULT_LANG, *sorted(langs - {DEFAULT_LANG})]
 
