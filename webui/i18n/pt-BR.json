@@ -216,7 +216,7 @@
   "onboarding.readiness.engine_ready": "Mecanismo Piper: pronto",
   "onboarding.readiness.voice_not_installed": "não instalada",
   "onboarding.readiness.missing_piper": "O mecanismo local Piper está ausente. Execute setup.ps1 a partir deste código-fonte ou mude para outro mecanismo nas configurações. A leitura fica pausada até que um mecanismo local esteja pronto.",
-  "onboarding.readiness.missing_voice": "Nenhuma voz local instalada ainda. Instale a voz padrão em inglês para que o PipPal possa falar offline. Tamanho do download: cerca de 120 MB.",
+  "onboarding.readiness.missing_voice": "Nenhuma voz local instalada ainda. Instale a voz padrão de {language} para que o PipPal possa falar offline. Tamanho do download: cerca de 120 MB.",
   "onboarding.readiness.ready": "A verificação de voz local está pronta.",
   "onboarding.recovery": "{failure} Para tentar novamente, selecione o texto e pressione {hotkey} de novo. Se esse app bloquear a cópia, tente um navegador, documento ou campo de texto, ou use Reproduzir amostra.",
 

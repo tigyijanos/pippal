@@ -216,7 +216,7 @@
   "onboarding.readiness.engine_ready": "Piper-motor: kész",
   "onboarding.readiness.voice_not_installed": "nincs telepítve",
   "onboarding.readiness.missing_piper": "A helyi Piper-motor hiányzik. Futtassa a setup.ps1 fájlt ebből a forráskódból, vagy váltson másik motorra a Beállításokban. A felolvasás szünetel, amíg egy helyi motor készen nem áll.",
-  "onboarding.readiness.missing_voice": "Még nincs telepítve helyi hang. Telepítse az alapértelmezett angol hangot, hogy a PipPal offline beszélni tudjon. Letöltési méret: körülbelül 120 MB.",
+  "onboarding.readiness.missing_voice": "Még nincs telepítve helyi hang. Telepítse a(z) {language} nyelv alapértelmezett hangját, hogy a PipPal offline beszélni tudjon. Letöltési méret: körülbelül 120 MB.",
   "onboarding.readiness.ready": "A helyi hangellenőrzés készen áll.",
   "onboarding.recovery": "{failure} Az újrapróbálkozáshoz jelöljön ki szöveget, és nyomja meg újra: {hotkey}. Ha az adott alkalmazás blokkolja a másolást, próbáljon meg egy böngészőt, dokumentumot vagy szövegmezőt, vagy használja a Minta lejátszását.",
 
