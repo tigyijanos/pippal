@@ -73,6 +73,17 @@ def _run(*args: str) -> int:
     return i18n_lint.main(list(args))
 
 
+def _write_py(root: Path, relpath: str, body: str) -> Path:
+    p = root / relpath
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body, "utf-8")
+    return p
+
+
+def _scan(root: Path) -> int:
+    return _run("--scan-literals", "--repo", "core", "--root", str(root))
+
+
 # --------------------------------------------------------------------------
 # Clean tree
 # --------------------------------------------------------------------------
@@ -124,6 +135,93 @@ def test_scan_exclusion_file_suppresses_a_literal(tmp_path):
     exc = tmp_path / "exc.txt"
     exc.write_text("file:webui/js/render.js::Read with PipPal\n", "utf-8")
     assert _run("--scan-literals", "--repo", "core", "--root", str(tmp_path), "--exclusions", str(exc)) == 0
+
+
+# --------------------------------------------------------------------------
+# T-208 — Python-side sink classes (show_message / bridge dict field / raise)
+# --------------------------------------------------------------------------
+def test_scan_flags_show_message_literal(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/engine.py",
+              'def go(ov):\n    ov.show_message("Nothing was selected")\n')
+    assert _scan(tmp_path) == 1
+
+
+def test_scan_flags_multiline_show_message_literal(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/engine.py",
+              'def go(ov):\n    ov.show_message(\n        "Nothing was selected"\n    )\n')
+    assert _scan(tmp_path) == 1
+
+
+def test_show_message_keyed_call_passes(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/engine.py",
+              'def go(ov):\n    ov.show_message(t("greeting"))\n')
+    assert _scan(tmp_path) == 0
+
+
+def test_show_message_underscore_t_alias_passes(tmp_path):
+    """Core render surfaces import ``t as _t``; ``_t(...)`` is a keyed call, not
+    a hardcoded literal (regression for the alias-blind false positive)."""
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/playback.py",
+              'from .i18n import t as _t\n\n\ndef go(ov):\n'
+              '    ov.show_message(_t("overlay.msg.synthesis_failed"))\n')
+    assert _scan(tmp_path) == 0
+
+
+def test_scan_flags_bridge_dict_field_literal(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/web_ui/bridge_x.py",
+              'def h():\n    return {"ok": False, "error": "The document could not be read"}\n')
+    assert _scan(tmp_path) == 1
+
+
+def test_bridge_dict_status_code_passes(tmp_path):
+    """A lowercase status/error CODE is plumbing, not prose — not flagged."""
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/web_ui/bridge_x.py",
+              'def h():\n    return {"status": "no_logs", "error": "invalid doc_id"}\n')
+    assert _scan(tmp_path) == 0
+
+
+def test_dict_field_sink_is_scoped_to_bridge_surfaced_modules(tmp_path):
+    """The same prose dict field OUTSIDE a bridge module is internal plumbing
+    and must NOT be flagged (scope, not global)."""
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/internal_helper.py",
+              'def h():\n    return {"error": "The document could not be read"}\n')
+    assert _scan(tmp_path) == 0
+
+
+def test_bridge_dict_field_exclusion_suppresses(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/web_ui/bridge_x.py",
+              'def h():\n    return {"error": "The document could not be read"}\n')
+    assert _scan(tmp_path) == 1
+    exc = tmp_path / "exc.txt"
+    exc.write_text(
+        "file:src/pippal/web_ui/bridge_x.py::The document could not be read\n", "utf-8"
+    )
+    assert _run("--scan-literals", "--repo", "core", "--root", str(tmp_path),
+                "--exclusions", str(exc)) == 0
+
+
+def test_scan_flags_raise_passthrough_literal(tmp_path):
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/web_ui/bridge_x.py",
+              'def go():\n    raise RuntimeError("The export could not be completed")\n')
+    assert _scan(tmp_path) == 1
+
+
+def test_raise_sink_is_scoped(tmp_path):
+    """A raise with prose OUTSIDE a bridge module is an internal error, never
+    shown verbatim — not flagged."""
+    _build_core_tree(tmp_path)
+    _write_py(tmp_path, "src/pippal/internal_helper.py",
+              'def go():\n    raise RuntimeError("The export could not be completed")\n')
+    assert _scan(tmp_path) == 0
 
 
 # --------------------------------------------------------------------------

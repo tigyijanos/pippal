@@ -13,7 +13,10 @@ import importlib.util
 import json
 import re
 import sys
+from fnmatch import fnmatch
 from pathlib import Path
+
+import i18n_lint_sinks as sinks  # tools/ is on sys.path via i18n_lint.py / tests
 
 # --------------------------------------------------------------------------
 # pippal.i18n engine access (shared CLDR plural oracle)
@@ -298,7 +301,7 @@ _PY_SINK = re.compile(
     r"\b(?:MenuItem|set_tooltip|set_title|set_label|notify|toast|showinfo|"
     r"showerror|showwarning|set_status)\s*\(\s*$"
 )
-_T_ARG = re.compile(r"(?:^|[^A-Za-z0-9_$])t\s*\(\s*$")
+_T_ARG = re.compile(r"(?:^|[^A-Za-z0-9_$])_?t\s*\(\s*$")
 _SKIP_LINE_CTX = re.compile(
     r"\b(?:import|from|require|console|logger|logging|getLogger|querySelector|"
     r"getElementById|getAttribute|setAttribute|dataset|classList|addEventListener|"
@@ -339,17 +342,29 @@ def scan_js_file(text: str, relpath: str, exc: Exclusions) -> list[tuple[int, st
     return findings
 
 
-def scan_py_file(text: str, relpath: str, exc: Exclusions) -> list[tuple[int, str]]:
+def scan_py_file(
+    text: str,
+    relpath: str,
+    exc: Exclusions,
+    *,
+    dict_scope: bool = False,
+    raise_scope: bool = False,
+) -> list[tuple[int, str]]:
+    """User-facing-literal scan for a Python module: the T-208 sinks (see
+    ``i18n_lint_sinks.classify``) plus the module-constant / ``_PY_SINK``
+    cases. The passthrough (dict-field / raise) sinks require real prose."""
     findings = []
+    carried = sinks.carried_sinks(text.splitlines())
     for lineno, value, col, _endcol, line in extract_py_strings(text):
         prefix = line[:col]
         if _T_ARG.search(prefix) or _SKIP_LINE_CTX.search(line) or exc.excludes(relpath, value):
             continue
-        is_module_const = bool(line) and line[0] not in " \t" and bool(_PY_MODULE_CONST.match(line))
-        if _PY_SINK.search(prefix):
-            if has_words(value) and not is_technical(value):
-                findings.append((lineno, value))
-        elif is_module_const and is_phrase(value) and not is_technical(value):
+        carried_kind = carried[lineno - 1] if 0 <= lineno - 1 < len(carried) else ""
+        cat = sinks.classify(prefix, carried_kind, dict_scope=dict_scope, raise_scope=raise_scope)
+        is_const = bool(line) and line[0] not in " \t" and bool(_PY_MODULE_CONST.match(line))
+        prose = is_phrase(value) and not is_technical(value)
+        msg = (_PY_SINK.search(prefix) or cat == "message") and has_words(value) and not is_technical(value)
+        if msg or (cat == "passthrough" and prose) or (is_const and prose):
             findings.append((lineno, value))
     return findings
 
@@ -357,14 +372,23 @@ def scan_py_file(text: str, relpath: str, exc: Exclusions) -> list[tuple[int, st
 def run_scan_literals(root: Path, cfg: dict, exc: Exclusions) -> int:
     findings: list[str] = []
     skip = {s.replace("\\", "/") for s in cfg.get("skip_files", [])}
-    for glob, scanner in ((cfg["js_globs"], scan_js_file), (cfg["py_globs"], scan_py_file)):
-        for pattern in glob:
-            for path in sorted(root.glob(pattern)):
-                rel = path.relative_to(root).as_posix()
-                if rel in skip:
-                    continue
-                for lineno, value in scanner(path.read_text("utf-8"), rel, exc):
-                    findings.append(f"{rel}:{lineno}: user-facing literal {value!r}")
+    dict_globs = cfg.get("py_dict_field_globs", [])
+    raise_globs = cfg.get("py_raise_globs", [])
+    for pattern in cfg["js_globs"] + cfg["py_globs"]:
+        py = pattern in cfg["py_globs"]
+        for path in sorted(root.glob(pattern)):
+            rel = path.relative_to(root).as_posix()
+            if rel in skip:
+                continue
+            text = path.read_text("utf-8")
+            if py:
+                hits = scan_py_file(text, rel, exc,
+                                    dict_scope=any(fnmatch(rel, g) for g in dict_globs),
+                                    raise_scope=any(fnmatch(rel, g) for g in raise_globs))
+            else:
+                hits = scan_js_file(text, rel, exc)
+            for lineno, value in hits:
+                findings.append(f"{rel}:{lineno}: user-facing literal {value!r}")
     if findings:
         print("scan-literals: FAIL — user-facing hardcoded string(s) outside catalogs:")
         for f in findings:

@@ -52,6 +52,11 @@ def repo_config(repo: str, root: Path) -> dict:
             # (gitignored, NOT shipped — see docs/strings-inventory); never scan
             # the generated aggregate, only the real ES-module render surfaces.
             "skip_files": ["webui/js/app.js"],
+            # T-208 Python-sink scopes (mirror of the Pro linter). show_message is
+            # scanned globally; the dict-field + raise passthrough sinks apply only
+            # to the pywebview bridges, whose text a JS surface renders verbatim.
+            "py_dict_field_globs": ["src/pippal/web_ui/bridge*.py"],
+            "py_raise_globs": ["src/pippal/web_ui/bridge*.py"],
             "catalog_dir": root / "webui" / "i18n",
             "reference_lang": "en",
             "check_core_purity": True,

@@ -38,3 +38,19 @@ file:src/pippal/onboarding.py::No selected text was captured.
 # is also a documented exclusion, but it is authored as an indented multi-line
 # implicit-concatenation constant, so the scanner (module-level col-0 heuristic)
 # does not flag it — no entry is required.
+
+# --------------------------------------------------------------------------
+# T-208 Python-side raise-passthrough exclusions (bridge.py).
+# --------------------------------------------------------------------------
+# Diagnostic invariant guards whose RuntimeError text a bridge surfaces via
+# str(exc) — but only inside the KEYED voice.status.failed frame ({error}
+# placeholder) or on a can't-happen-from-UI path. "unknown voice"/"unknown
+# overlay action" fire only when an id/tag that originates in code or a server-
+# rendered list is invalid (never free user input); the phrasing is non-sentence
+# developer text. Defensive keying would be noise (see the Pro linter's matching
+# bridge-guard exclusions). NOTE: 'empty response for {dlabel}' is a network-
+# failure passthrough detail — flagged here for optional later extraction, but
+# consistent with the sanctioned raise-passthrough-detail class for now.
+file:src/pippal/web_ui/bridge.py::unknown voice: {voice_id}
+file:src/pippal/web_ui/bridge.py::empty response for {dlabel}
+file:src/pippal/web_ui/bridge.py::unknown overlay action: {tag}
