@@ -38,6 +38,10 @@
 
   "settings.hotkeys.title": "Гарячі клавіші",
   "settings.hotkeys.hint": "Формат: windows+shift+r · ctrl+alt+space · alt+shift+f1 …  Захоплені комбінації придушуються (інші застосунки їх не бачать).",
+  "settings.hotkeys.action.speak": "Читати виділене",
+  "settings.hotkeys.action.queue": "Додати виділене в чергу",
+  "settings.hotkeys.action.pause": "Пауза / Відновити",
+  "settings.hotkeys.action.stop": "Зупинити",
 
   "settings.panel.title": "Панель читання",
   "settings.panel.show_overlay": "Показувати панель під час читання",

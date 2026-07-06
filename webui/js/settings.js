@@ -220,7 +220,15 @@ export function renderSettings() {
     var hkRows = [];
     hotkeys.forEach(function (a) {
       var key = a[1],
-        label = a[2],
+        // The registered label (a[2]) is an i18n catalog KEY for built-in
+        // actions. t() renders it; when neither the active nor the fallback
+        // catalog has the key it returns the "⟦key⟧" marker, which
+        // means a third-party plugin registered a plain-English label — fall
+        // back to that raw string so the plugin API stays compatible.
+        label = (function (raw) {
+          var s = t(raw);
+          return s === "⟦" + raw + "⟧" ? raw : s;
+        })(a[2]),
         def = a[3];
       var inp = U.el("input", { type: "text", testid: "settings-" + key });
       inp.classList.add("grow");
