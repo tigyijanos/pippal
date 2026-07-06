@@ -38,6 +38,10 @@
 
   "settings.hotkeys.title": "快捷键",
   "settings.hotkeys.hint": "格式：windows+shift+r · ctrl+alt+space · alt+shift+f1 …  已捕获的组合键会被拦截（其他应用不会同时收到）。",
+  "settings.hotkeys.action.speak": "朗读所选内容",
+  "settings.hotkeys.action.queue": "将所选加入队列",
+  "settings.hotkeys.action.pause": "暂停 / 继续",
+  "settings.hotkeys.action.stop": "停止",
 
   "settings.panel.title": "朗读面板",
   "settings.panel.show_overlay": "朗读时显示面板",

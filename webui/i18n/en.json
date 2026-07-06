@@ -38,6 +38,10 @@
 
   "settings.hotkeys.title": "Hotkeys",
   "settings.hotkeys.hint": "Format: windows+shift+r · ctrl+alt+space · alt+shift+f1 …  Captured combos are suppressed (other apps won't also see them).",
+  "settings.hotkeys.action.speak": "Read selection",
+  "settings.hotkeys.action.queue": "Queue selection",
+  "settings.hotkeys.action.pause": "Pause / Resume",
+  "settings.hotkeys.action.stop": "Stop",
 
   "settings.panel.title": "Reader panel",
   "settings.panel.show_overlay": "Show panel while reading",

@@ -38,6 +38,10 @@
 
   "settings.hotkeys.title": "Tastenkürzel",
   "settings.hotkeys.hint": "Format: windows+shift+r · ctrl+alt+space · alt+shift+f1 …  Erfasste Kombinationen werden unterdrückt (andere Apps sehen sie nicht).",
+  "settings.hotkeys.action.speak": "Auswahl vorlesen",
+  "settings.hotkeys.action.queue": "Auswahl einreihen",
+  "settings.hotkeys.action.pause": "Pause / Fortsetzen",
+  "settings.hotkeys.action.stop": "Stopp",
 
   "settings.panel.title": "Lesefenster",
   "settings.panel.show_overlay": "Fenster beim Vorlesen anzeigen",
