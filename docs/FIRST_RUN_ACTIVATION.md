@@ -14,7 +14,7 @@ new TTS backend.
 ## Current Baseline
 
 - `setup.ps1` can provision the local Piper binary, Python
-  dependencies, and the default `en_US-ryan-high` voice.
+  dependencies, and the default `en_US-ljspeech-high` voice.
 - The app already uses the tray, Settings window, Voice Manager,
   overlay, and global hotkey architecture needed for activation.
 - When the selected backend has no usable voice, the engine can play a
@@ -87,7 +87,7 @@ Ready state:
 
 ```text
 Piper engine: ready
-Voice: en_US-ryan-high
+Voice: en_US-ljspeech-high
 Hotkey: Win+Shift+R
 ```
 

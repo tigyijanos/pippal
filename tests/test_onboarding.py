@@ -111,7 +111,7 @@ def test_readiness_reports_missing_piper(tmp_path: Path) -> None:
     readiness = onboarding.build_activation_readiness(
         {
             "engine": "piper",
-            "voice": "en_US-ryan-high.onnx",
+            "voice": "en_US-ljspeech-high.onnx",
             "hotkey_speak": "windows+shift+r",
         },
         piper_exe=tmp_path / "missing" / "piper.exe",
@@ -132,7 +132,7 @@ def test_readiness_reports_missing_voice(tmp_path: Path) -> None:
     readiness = onboarding.build_activation_readiness(
         {
             "engine": "piper",
-            "voice": "en_US-ryan-high.onnx",
+            "voice": "en_US-ljspeech-high.onnx",
             "hotkey_speak": "windows+shift+r",
         },
         piper_exe=piper_exe,
@@ -148,12 +148,46 @@ def test_readiness_reports_ready_with_installed_voice(tmp_path: Path) -> None:
     piper_exe = tmp_path / "piper.exe"
     piper_exe.write_bytes(b"exe")
     voices_dir = tmp_path / "voices"
-    _install_voice(voices_dir, "en_US-ryan-high.onnx")
+    _install_voice(voices_dir, "en_US-ljspeech-high.onnx")
 
     readiness = onboarding.build_activation_readiness(
         {
             "engine": "piper",
-            "voice": "en_US-ryan-high.onnx",
+            "voice": "en_US-ljspeech-high.onnx",
+            "hotkey_speak": "windows+shift+r",
+        },
+        piper_exe=piper_exe,
+        voices_dir=voices_dir,
+    )
+
+    assert readiness.status == onboarding.READINESS_READY
+    assert readiness.voice_label == "en_US-ljspeech-high"
+    assert readiness.hotkey_label == "Win+Shift+R"
+    assert readiness.can_play_sample is True
+
+
+def test_already_installed_removed_voice_still_plays(tmp_path: Path) -> None:
+    """A voice no longer offered in the catalog (#157 removed ryan/lessac)
+    must keep working when the user already has it installed and configured.
+    The readiness/play path resolves the config voice filename directly and
+    must NOT gate on catalog membership."""
+    from pippal import voices
+
+    removed_voice = "en_US-ryan-high.onnx"
+    # Guard: this voice is intentionally absent from the offered catalog.
+    assert removed_voice.removesuffix(".onnx") not in {
+        v["id"] for v in voices.KNOWN_VOICES
+    }
+
+    piper_exe = tmp_path / "piper.exe"
+    piper_exe.write_bytes(b"exe")
+    voices_dir = tmp_path / "voices"
+    _install_voice(voices_dir, removed_voice)
+
+    readiness = onboarding.build_activation_readiness(
+        {
+            "engine": "piper",
+            "voice": removed_voice,
             "hotkey_speak": "windows+shift+r",
         },
         piper_exe=piper_exe,
@@ -162,7 +196,6 @@ def test_readiness_reports_ready_with_installed_voice(tmp_path: Path) -> None:
 
     assert readiness.status == onboarding.READINESS_READY
     assert readiness.voice_label == "en_US-ryan-high"
-    assert readiness.hotkey_label == "Win+Shift+R"
     assert readiness.can_play_sample is True
 
 
@@ -172,7 +205,7 @@ def test_default_engine_ready_requires_piper_exe_and_voice(tmp_path: Path) -> No
 
     assert onboarding.is_default_engine_ready(piper_exe=piper_exe, voices_dir=voices_dir) is False
 
-    _install_voice(voices_dir, "en_US-ryan-high.onnx")
+    _install_voice(voices_dir, "en_US-ljspeech-high.onnx")
 
     assert onboarding.is_default_engine_ready(piper_exe=piper_exe, voices_dir=voices_dir) is False
 

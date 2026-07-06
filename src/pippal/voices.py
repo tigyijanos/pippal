@@ -19,12 +19,16 @@ class PiperVoice(TypedDict):
 # Curated subset of voices on huggingface.co/rhasspy/piper-voices.
 KNOWN_VOICES: list[PiperVoice] = [
     # English
-    {"id": "en_US-ryan-high",                  "lang": "en_US", "name": "ryan",                "quality": "high",   "label": "Ryan — US male, very natural (recommended)"},
+    # NOTE (#157): en_US-ryan-* and en_US-lessac-high are intentionally NOT
+    # offered here. ryan's dataset is CC BY-NC-SA 4.0 (non-commercial) and
+    # lessac is Blizzard-2013 research-only — both are unacceptable licenses
+    # to ship as a paid app's catalog. Already-installed copies keep playing
+    # (the play path uses the config voice filename, not catalog membership).
+    {"id": "en_US-ljspeech-high",              "lang": "en_US", "name": "ljspeech",            "quality": "high",   "label": "LJSpeech — US female, natural (recommended)"},
     {"id": "en_US-libritts_r-medium",          "lang": "en_US", "name": "libritts_r",          "quality": "medium", "label": "LibriTTS-R — US multi-speaker, very natural"},
     {"id": "en_US-hfc_female-medium",          "lang": "en_US", "name": "hfc_female",          "quality": "medium", "label": "HFC Female — US female, clear"},
     {"id": "en_US-hfc_male-medium",            "lang": "en_US", "name": "hfc_male",            "quality": "medium", "label": "HFC Male — US male, clear"},
     {"id": "en_US-amy-medium",                 "lang": "en_US", "name": "amy",                 "quality": "medium", "label": "Amy — US female, popular"},
-    {"id": "en_US-lessac-high",                "lang": "en_US", "name": "lessac",              "quality": "high",   "label": "Lessac — US female, neutral"},
     {"id": "en_US-kathleen-low",               "lang": "en_US", "name": "kathleen",            "quality": "low",    "label": "Kathleen — US female (small/fast)"},
     {"id": "en_GB-alan-medium",                "lang": "en_GB", "name": "alan",                "quality": "medium", "label": "Alan — UK male"},
     {"id": "en_GB-northern_english_male-medium","lang": "en_GB","name": "northern_english_male","quality": "medium","label": "Northern English Male — UK"},
@@ -191,7 +195,7 @@ _QUALITY_RANK: dict[str, int] = {"high": 3, "medium": 2, "low": 1, "x_low": 0}
 #: the prefix produced from a BCP-47 UI tag (``pt-BR`` → ``pt_BR``, ``de`` →
 #: ``de``). Region-specific keys win over the bare base language.
 PREFERRED_DEFAULT_VOICE: dict[str, str] = {
-    "en": "en_US-ryan-high",
+    "en": "en_US-ljspeech-high",
     "de": "de_DE-thorsten-high",
     "hu": "hu_HU-anna-medium",
     "uk": "uk_UA-ukrainian_tts-medium",

@@ -192,7 +192,7 @@ class TestActivationState:
         readiness = onboarding.FirstRunReadiness(
             status=onboarding.READINESS_READY,
             engine_label="Piper engine: ready",
-            voice_label="en_US-ryan-high",
+            voice_label="en_US-ljspeech-high",
             hotkey_label="Win+Shift+R",
             can_play_sample=True,
             message="Local voice check is ready.",

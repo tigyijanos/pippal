@@ -30,7 +30,7 @@ def test_config_load_when_missing(benchmark, tmp_path: Path):
 def test_config_load_existing(benchmark, tmp_path: Path):
     p = tmp_path / "config.json"
     p.write_text(json.dumps({
-        "voice": "en_US-ryan-high.onnx",
+        "voice": "en_US-ljspeech-high.onnx",
         "length_scale": 0.95,
     }), encoding="utf-8")
     benchmark(config.load_config, p)
@@ -38,7 +38,7 @@ def test_config_load_existing(benchmark, tmp_path: Path):
 
 def test_config_save(benchmark, tmp_path: Path):
     cfg = dict(config.DEFAULT_CONFIG)
-    cfg["voice"] = "en_US-ryan-high.onnx"
+    cfg["voice"] = "en_US-ljspeech-high.onnx"
     p = tmp_path / "config.json"
     # Same path every round — that's actually what production does
     # (Settings → Save overwrites). os.replace is part of the cost
