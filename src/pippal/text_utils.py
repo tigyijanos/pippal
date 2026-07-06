@@ -7,7 +7,26 @@ from collections.abc import Iterable
 
 _PUNCT_SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _NEWLINE_SPLIT = re.compile(r"[ \t]*\n+[ \t]*")
-_WORD_RE = re.compile(r"\S+")
+
+# Unspaced CJK scripts — Chinese (Han) and Japanese (kana + kanji) — are
+# written without inter-word whitespace, so a whole sentence would collapse
+# into a single ``\S+`` token and the karaoke highlight could never advance
+# (issue #375). Each such character is therefore its own karaoke unit.
+# Korean (Hangul) and Cyrillic are word-spaced and deliberately EXCLUDED so
+# their behaviour stays byte-identical to the historical ``\S+`` tokeniser.
+_CJK = (
+    "぀-ヿ"          # Hiragana + Katakana
+    "ㇰ-ㇿ"          # Katakana phonetic extensions
+    "㐀-䶿"          # CJK Unified Ideographs Extension A
+    "一-鿿"          # CJK Unified Ideographs
+    "豈-﫿"          # CJK Compatibility Ideographs
+    "ｦ-ﾟ"          # Halfwidth Katakana
+    "\U00020000-\U0002ffff"  # CJK Unified Ideographs Ext B–F (astral)
+)
+# A karaoke token is either a single unspaced-CJK character, or a maximal run
+# of non-whitespace, non-CJK characters (identical to ``\S+`` for spaced
+# scripts, which contain no CJK code points).
+_WORD_RE = re.compile(rf"[{_CJK}]|[^\s{_CJK}]+")
 _VOWELS = "aeiouyáéíóöőúüű"
 _TRIM_CHARS = "'\"-.,;:!?()[]{}<>/«»“”…"
 

@@ -223,6 +223,11 @@ export function renderOverlay() {
   // Karaoke colour stops + fade — a faithful port of overlay_paint.py
   // _word_appearance (PAST/FUTURE/PEAK RGB, smoothstep lerp, FADE_SECS),
   // identical to the public core frontend.
+  // A single unspaced-CJK karaoke unit (Han + Japanese kana), mirroring the
+  // core ``text_utils._CJK`` character class. Used to suppress the trailing
+  // space between per-character CJK segments (issue #375). The ``u`` flag
+  // lets the astral Ext-B..F range match as one code point.
+  var CJK_UNIT_RE = /^[぀-ヿㇰ-ㇿ㐀-䶿一-鿿豈-﫿ｦ-ﾟ\u{20000}-\u{2ffff}]$/u;
   var PAST = [0x60, 0x65, 0x7a],
     FUTURE = [0xc8, 0xcd, 0xe0],
     PEAK = [0xff, 0xff, 0xff],
@@ -357,11 +362,17 @@ export function renderOverlay() {
             lastText = s.chunk_text;
             bodyEl.innerHTML = "";
             s.words.forEach(function (w, i) {
+              // Spaced scripts get a trailing space between words (unchanged).
+              // Unspaced CJK (issue #375) is segmented per character by the
+              // core tokeniser; inserting a space between each glyph would
+              // visually break Chinese/Japanese, so single CJK units render
+              // with no trailing space.
+              var sep = CJK_UNIT_RE.test(w.word) ? "" : " ";
               bodyEl.appendChild(
                 U.el("span", {
                   class: "w",
                   "data-i": String(i),
-                  text: w.word + " ",
+                  text: w.word + sep,
                 }),
               );
             });
