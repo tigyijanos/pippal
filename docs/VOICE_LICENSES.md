@@ -25,7 +25,7 @@ out-of-the-box default. The EN default was therefore moved off `en_US-ryan-high`
 | hu      | `hu_HU-anna-medium`    | OHF-Voice voice-datasets | **CC0** | Finetuned from U.S. English lessac | GRAY (lessac-derived) — PO-accepted |
 | uk      | `uk_UA-ukrainian_tts-medium` | OHF-Voice voice-datasets | **CC0** | Trained from scratch | Clean — commercial-safe |
 | pt-BR   | `pt_BR-faber-medium`   | OHF-Voice voice-datasets | **CC0** | Finetuned from U.S. English lessac | GRAY (lessac-derived) — PO-accepted |
-| zh-CN   | `zh_CN-huayan-medium`  | HuaYan_TTS | **Unknown** | Finetuned from U.S. English lessac | UNCLEAR (Unknown license + lessac-derived) — see note |
+| zh-CN   | `zh_CN-huayan-medium`  | HuaYan_TTS | **Unknown** | Finetuned from U.S. English lessac | GRAY (Unknown license + lessac-derived) — PO-accepted as download-only default; see note |
 
 ### lessac-derivative gray-zone note (hu, pt-BR, de, zh)
 
@@ -38,7 +38,7 @@ voices for those languages, the training data is CC0, and the derivative-weights
 question is legally unsettled rather than a clear NC restriction. This decision is
 documented here as required by #157.
 
-### zh-CN huayan — verification finding (STOP-and-report per #157)
+### zh-CN huayan — verification finding + PO decision (#157)
 
 `zh_CN-huayan-medium` was verified against its HF `MODEL_CARD`:
 
@@ -47,10 +47,16 @@ documented here as required by #157.
 - Model lineage: **finetuned from the U.S. English lessac voice** (medium).
 
 This is *both* the lessac-derivative gray zone **and** an explicitly Unknown
-dataset license. Per #157 the zh default is therefore **left unchanged**
-(`zh_CN-huayan-medium` stays) and this finding is reported to the PO for a
-decision. Changing the zh default is out of scope for this ticket; if a
-commercial-safe zh_CN voice is required, that is a follow-up ticket.
+dataset license. **PO decision (#157): KEEP `zh_CN-huayan-medium` as the zh
+default.** It is a consistent extension of the accepted lessac-derivative
+gray-zone policy — offered download-only (not bundled), low practical risk,
+and there is no license-clean from-scratch Piper alternative for zh_CN. No
+code change for zh.
+
+**License-clean zh path:** Pro's **Kokoro** engine (Apache-2.0) is the
+commercial-safe route for Chinese for Pro users; a future ticket may surface
+a Kokoro zh voice as the recommended zh default if a clean Piper voice does
+not materialise.
 
 ## Removed from the offered catalog (#157)
 
