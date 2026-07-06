@@ -28,6 +28,46 @@ var vmState = {
   q: "",
 };
 
+// The language the UI is currently rendered in (set by the i18n engine on
+// <html lang> at reveal; falls back to the engine's t.lang accessor, then en).
+function activeLangTag() {
+  var htmlLang =
+    (document.documentElement && document.documentElement.lang) || "";
+  return htmlLang || t.lang || "en";
+}
+
+// Localised language name for a Piper locale code (e.g. "en_US" → "English"
+// in en, "英语" in zh-CN) via Intl.DisplayNames in the ACTIVE UI language.
+// WebView2/Chromium supports Intl.DisplayNames; the try/catch falls back to
+// the bridge-provided English name for engine failures AND unknown codes so a
+// missing display name never blanks the filter option.
+function langDisplayName(code, fallback) {
+  try {
+    var dn = new Intl.DisplayNames([activeLangTag()], { type: "language" });
+    // Piper codes are underscore locales ("en_US"); Intl wants BCP-47 tags.
+    var name = dn.of(String(code).replace(/_/g, "-"));
+    if (name && name !== code) return name;
+  } catch (e) {
+    /* fall through to the bridge-provided name */
+  }
+  return fallback;
+}
+
+// Localised quality label for a Piper quality code. Option VALUES stay the
+// English codes ("high"/"medium"/"low"/"x_low") — the filter logic and the
+// Playwright select_option() calls key off them — only the visible LABEL is
+// localised. Unknown codes pass through unchanged.
+function qualLabelFor(code) {
+  var map = {
+    Any: t("voices.filter.quality_any"),
+    high: t("voices.filter.quality_high"),
+    medium: t("voices.filter.quality_medium"),
+    low: t("voices.filter.quality_low"),
+    x_low: t("voices.filter.quality_x_low"),
+  };
+  return map[code] || code;
+}
+
 export function renderVoiceManager() {
   return API.call("get_voice_catalogue").then(function (cat) {
     vmState.all = cat.voices;
@@ -41,18 +81,17 @@ export function renderVoiceManager() {
       { value: "__all__", label: t("voices.filter.all_langs") },
     ].concat(
       cat.languages.map(function (l) {
-        return { value: l.code, label: l.name };
+        return { value: l.code, label: langDisplayName(l.code, l.name) };
       }),
     );
     var langSel = U.select("vm-language", langOpts, vmState.lang);
     // Option VALUES stay the English filter codes (the filter logic and the
-    // Playwright select_option() calls key off them); only the visible LABEL
-    // for the translatable "Any" bucket is localised.
-    var qualLabels = { Any: t("voices.filter.quality_any") };
+    // Playwright select_option() calls key off them); only the visible LABELS
+    // are localised (see qualLabelFor).
     var qualSel = U.select(
       "vm-quality",
       ["Any", "high", "medium", "low", "x_low"].map(function (q) {
-        return { value: q, label: qualLabels[q] || q };
+        return { value: q, label: qualLabelFor(q) };
       }),
       vmState.quality,
     );
@@ -357,7 +396,10 @@ function voiceRow(v, onChanged) {
         U.el("div", { class: "vname", text: v.label }),
         U.el("div", {
           class: "vsub",
-          text: t("voices.row.meta", { id: v.id, quality: v.quality }),
+          text: t("voices.row.meta", {
+            id: v.id,
+            quality: qualLabelFor(v.quality),
+          }),
         }),
       ]),
       statusEl,
