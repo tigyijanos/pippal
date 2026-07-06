@@ -26,9 +26,16 @@ from pathlib import Path
 from typing import Any
 
 from .config import DEFAULT_CONFIG
-from .i18n import t
+from .i18n import get_language, t
 from .paths import ASSET_NO_VOICE_WAV, DATA_ROOT, PIPER_EXE, VOICES_DIR
-from .voices import KNOWN_VOICES, PiperVoice, installed_voices, voice_filename
+from .voices import (
+    KNOWN_VOICES,
+    PiperVoice,
+    default_voice_for_language,
+    installed_voices,
+    language_endonym,
+    voice_filename,
+)
 
 # Verbatim text of the bundled WAV. Kept here (next to the path it
 # describes) so when we re-record we can update both in one place.
@@ -235,13 +242,24 @@ def _display_voice_name(filename: str | None) -> str:
     return name or t("onboarding.readiness.voice_not_installed")
 
 
-def default_piper_voice() -> PiperVoice:
+def english_default_piper_voice() -> PiperVoice:
     """Return the curated Piper voice that matches the Core default config."""
     configured_voice = str(DEFAULT_CONFIG["voice"])
     for voice in KNOWN_VOICES:
         if voice_filename(voice) == configured_voice:
             return voice
     raise RuntimeError(f"Default Piper voice is not in the curated catalogue: {configured_voice}")
+
+
+def default_piper_voice() -> PiperVoice:
+    """Return the Piper voice to install as the first-run default.
+
+    Resolves the best catalog voice for the active UI language
+    (:func:`pippal.i18n.get_language`), falling back to the curated English
+    default when no voice exists for that language — so ``en`` users, and any
+    language without a Piper voice, keep the historical behaviour (#154)."""
+    voice = default_voice_for_language(get_language())
+    return voice if voice is not None else english_default_piper_voice()
 
 
 def build_activation_readiness(
@@ -281,13 +299,18 @@ def build_activation_readiness(
         )
 
     if not voices:
+        default_voice = default_piper_voice()
+        language = language_endonym(default_voice["lang"])
         return FirstRunReadiness(
             status=READINESS_MISSING_VOICE,
             engine_label=t("onboarding.readiness.engine_ready"),
             voice_label=t("onboarding.readiness.voice_not_installed"),
             hotkey_label=hotkey_label,
             can_play_sample=False,
-            message=t("onboarding.readiness.missing_voice"),
+            message=t(
+                "onboarding.readiness.missing_voice",
+                {"language": language},
+            ),
         )
 
     return FirstRunReadiness(

@@ -216,7 +216,7 @@
   "onboarding.readiness.engine_ready": "Piper engine: ready",
   "onboarding.readiness.voice_not_installed": "not installed",
   "onboarding.readiness.missing_piper": "The local Piper engine is missing. Run setup.ps1 from this checkout, or switch to another engine in Settings. Reading is paused until a local engine is ready.",
-  "onboarding.readiness.missing_voice": "No local voice is installed yet. Install the default English voice so PipPal can speak offline. Download size: about 120 MB.",
+  "onboarding.readiness.missing_voice": "No local voice is installed yet. Install the default {language} voice so PipPal can speak offline. Download size: about 120 MB.",
   "onboarding.readiness.ready": "Local voice check is ready.",
   "onboarding.recovery": "{failure} To retry, select text and press {hotkey} again. If that app blocks copying, try a browser, document, or text field, or use Play sample.",
 

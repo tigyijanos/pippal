@@ -216,7 +216,7 @@
   "onboarding.readiness.engine_ready": "Piper-Engine: bereit",
   "onboarding.readiness.voice_not_installed": "nicht installiert",
   "onboarding.readiness.missing_piper": "Die lokale Piper-Engine fehlt. Führen Sie setup.ps1 aus diesem Quellcode aus oder wechseln Sie in den Einstellungen zu einer anderen Engine. Das Vorlesen ist pausiert, bis eine lokale Engine bereit ist.",
-  "onboarding.readiness.missing_voice": "Es ist noch keine lokale Stimme installiert. Installieren Sie die englische Standardstimme, damit PipPal offline sprechen kann. Downloadgröße: etwa 120 MB.",
+  "onboarding.readiness.missing_voice": "Es ist noch keine lokale Stimme installiert. Installieren Sie die Standardstimme für {language}, damit PipPal offline sprechen kann. Downloadgröße: etwa 120 MB.",
   "onboarding.readiness.ready": "Die lokale Stimmenprüfung ist bereit.",
   "onboarding.recovery": "{failure} Zum erneuten Versuch markieren Sie Text und drücken erneut {hotkey}. Wenn diese App das Kopieren blockiert, versuchen Sie einen Browser, ein Dokument oder ein Textfeld – oder verwenden Sie „Beispiel abspielen“.",
 

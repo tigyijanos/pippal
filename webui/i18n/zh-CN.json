@@ -213,7 +213,7 @@
   "onboarding.readiness.engine_ready": "Piper 引擎：就绪",
   "onboarding.readiness.voice_not_installed": "未安装",
   "onboarding.readiness.missing_piper": "缺少本地 Piper 引擎。请从此源代码运行 setup.ps1，或在设置中切换到其他引擎。在本地引擎就绪之前，朗读将暂停。",
-  "onboarding.readiness.missing_voice": "尚未安装本地语音。请安装默认英语语音，以便 PipPal 可以离线朗读。下载大小：约 120 MB。",
+  "onboarding.readiness.missing_voice": "尚未安装本地语音。请安装 {language} 默认语音，以便 PipPal 可以离线朗读。下载大小：约 120 MB。",
   "onboarding.readiness.ready": "本地语音检查已就绪。",
   "onboarding.recovery": "{failure} 若要重试，请选中文本并再次按 {hotkey}。如果该应用阻止复制，请尝试浏览器、文档或文本框，或使用“播放示例”。",
 

@@ -31,7 +31,11 @@ KNOWN_VOICES: list[PiperVoice] = [
     {"id": "en_GB-jenny_dioco-medium",         "lang": "en_GB", "name": "jenny_dioco",         "quality": "medium", "label": "Jenny — UK female"},
     # Translation targets
     {"id": "hu_HU-anna-medium",                "lang": "hu_HU", "name": "anna",                "quality": "medium", "label": "Anna — Hungarian female (for translation)"},
+    {"id": "de_DE-thorsten-high",              "lang": "de_DE", "name": "thorsten",            "quality": "high",   "label": "Thorsten — German male, natural (recommended)"},
     {"id": "de_DE-thorsten-medium",            "lang": "de_DE", "name": "thorsten",            "quality": "medium", "label": "Thorsten — German male"},
+    {"id": "zh_CN-huayan-medium",              "lang": "zh_CN", "name": "huayan",              "quality": "medium", "label": "Huayan — Chinese female"},
+    {"id": "uk_UA-ukrainian_tts-medium",       "lang": "uk_UA", "name": "ukrainian_tts",       "quality": "medium", "label": "Ukrainian TTS — Ukrainian"},
+    {"id": "pt_BR-faber-medium",               "lang": "pt_BR", "name": "faber",               "quality": "medium", "label": "Faber — Brazilian Portuguese male"},
     {"id": "es_ES-davefx-medium",              "lang": "es_ES", "name": "davefx",              "quality": "medium", "label": "DaveFX — Spanish male"},
     {"id": "fr_FR-siwis-medium",               "lang": "fr_FR", "name": "siwis",               "quality": "medium", "label": "Siwis — French female"},
     {"id": "it_IT-paola-medium",               "lang": "it_IT", "name": "paola",               "quality": "medium", "label": "Paola — Italian female"},
@@ -170,3 +174,105 @@ def find_piper_voice_for_language(language: str) -> str | None:
             if v.startswith(f"{code}-"):
                 return v
     return None
+
+
+# --------------------------------------------------------------------------
+# First-run default-voice routing (#154)
+# --------------------------------------------------------------------------
+# When onboarding installs the "default voice", pick the voice that matches the
+# resolved UI language rather than always installing the English default. The
+# match is derived from the catalog by locale prefix; the override map below
+# pins the recommended voice per language for quality/taste (each id MUST exist
+# in ``KNOWN_VOICES``). Anything without a catalog voice falls back to English.
+
+_QUALITY_RANK: dict[str, int] = {"high": 3, "medium": 2, "low": 1, "x_low": 0}
+
+#: UI-language locale prefix → preferred first-run default voice id. Keyed by
+#: the prefix produced from a BCP-47 UI tag (``pt-BR`` → ``pt_BR``, ``de`` →
+#: ``de``). Region-specific keys win over the bare base language.
+PREFERRED_DEFAULT_VOICE: dict[str, str] = {
+    "en": "en_US-ryan-high",
+    "de": "de_DE-thorsten-high",
+    "hu": "hu_HU-anna-medium",
+    "uk": "uk_UA-ukrainian_tts-medium",
+    "zh_CN": "zh_CN-huayan-medium",
+    "pt_BR": "pt_BR-faber-medium",
+}
+
+#: Language endonym (the language's own name) used to parameterise the
+#: onboarding "install the default <language> voice" copy. Keyed by Piper
+#: locale code with a base-language fallback, so it resolves for the resolved
+#: voice's ``lang`` regardless of UI language.
+LANGUAGE_ENDONYM: dict[str, str] = {
+    "en": "English",
+    "de": "Deutsch",
+    "hu": "magyar",
+    "uk": "українська",
+    "zh": "中文",
+    "pt": "português",
+    "pt_BR": "português (Brasil)",
+    "es": "español",
+    "fr": "français",
+    "it": "italiano",
+    "pl": "polski",
+    "nl": "Nederlands",
+}
+
+
+def ui_lang_to_locale_prefix(lang: str | None) -> str:
+    """Normalise a BCP-47 UI tag to a Piper locale prefix (``pt-BR`` →
+    ``pt_BR``, ``zh-CN`` → ``zh_CN``, ``de`` → ``de``)."""
+    return (lang or "").strip().replace("-", "_")
+
+
+def _voice_by_id(voice_id: str) -> PiperVoice | None:
+    for v in KNOWN_VOICES:
+        if v["id"] == voice_id:
+            return v
+    return None
+
+
+def _lang_matches_prefix(voice_lang: str, prefix: str) -> bool:
+    if not prefix:
+        return False
+    if voice_lang == prefix or voice_lang.startswith(f"{prefix}_"):
+        return True
+    # Base-language match, e.g. prefix ``de`` catches ``de_DE``.
+    return voice_lang.split("_")[0] == prefix
+
+
+def default_voice_for_language(lang: str | None) -> PiperVoice | None:
+    """Best first-run Piper voice for a UI language tag.
+
+    Returns ``None`` when the catalog has no voice for the language — the
+    caller then falls back to the curated English default (unchanged
+    behaviour for ``en`` and for any language without a Piper voice)."""
+    prefix = ui_lang_to_locale_prefix(lang)
+    if not prefix:
+        return None
+    # 1. Explicit override (recommended voice, quality/taste), region first.
+    override = PREFERRED_DEFAULT_VOICE.get(prefix)
+    if override is None:
+        override = PREFERRED_DEFAULT_VOICE.get(prefix.split("_")[0])
+    if override:
+        voice = _voice_by_id(override)
+        if voice is not None:
+            return voice
+    # 2. Derive from the catalog by locale prefix, best quality first.
+    candidates = [v for v in KNOWN_VOICES if _lang_matches_prefix(v["lang"], prefix)]
+    if candidates:
+        return max(candidates, key=lambda v: _QUALITY_RANK.get(v["quality"], -1))
+    # 3. No catalog voice for this language.
+    return None
+
+
+def language_endonym(locale_code: str | None) -> str:
+    """The endonym (self-name) of a Piper locale, e.g. ``de_DE`` → ``Deutsch``.
+
+    Falls back to the base language, then to :func:`locale_name`, so the
+    onboarding copy always renders something readable."""
+    code = ui_lang_to_locale_prefix(locale_code)
+    if code in LANGUAGE_ENDONYM:
+        return LANGUAGE_ENDONYM[code]
+    base = code.split("_")[0]
+    return LANGUAGE_ENDONYM.get(base) or locale_name(code)
