@@ -33,7 +33,7 @@ def _restore_language():
 @pytest.mark.parametrize(
     ("lang", "expected_id"),
     [
-        ("en", "en_US-ryan-high"),
+        ("en", "en_US-ljspeech-high"),
         ("de", "de_DE-thorsten-high"),
         ("hu", "hu_HU-anna-medium"),
         ("uk", "uk_UA-ukrainian_tts-medium"),
@@ -135,7 +135,7 @@ def _missing_voice_readiness(tmp_path):
     return onboarding.build_activation_readiness(
         {
             "engine": "piper",
-            "voice": "en_US-ryan-high.onnx",
+            "voice": "en_US-ljspeech-high.onnx",
             "hotkey_speak": "windows+shift+r",
         },
         piper_exe=piper_exe,

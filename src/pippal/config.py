@@ -28,7 +28,7 @@ from .paths import CONFIG_PATH
 DEFAULT_CONFIG: dict[str, Any] = {
     "brand_name": "PipPal",
     "engine": "piper",                      # "piper" | (any plugin-registered)
-    "voice": "en_US-ryan-high.onnx",        # Piper voice file
+    "voice": "en_US-ljspeech-high.onnx",    # Piper voice file (public-domain default, #157)
     "length_scale": 1.0,
     "noise_scale": 0.667,
     "noise_w": 0.8,
