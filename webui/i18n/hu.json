@@ -39,7 +39,7 @@
   "settings.hotkeys.title": "Gyorsbillentyűk",
   "settings.hotkeys.hint": "Formátum: windows+shift+r · ctrl+alt+space · alt+shift+f1 …  A rögzített kombinációkat elnyomjuk (más alkalmazások nem látják őket).",
   "settings.hotkeys.action.speak": "Kijelölés felolvasása",
-  "settings.hotkeys.action.queue": "Kijelölés sorba",
+  "settings.hotkeys.action.queue": "Kijelölés sorba állítása",
   "settings.hotkeys.action.pause": "Szünet / Folytatás",
   "settings.hotkeys.action.stop": "Leállítás",
 
