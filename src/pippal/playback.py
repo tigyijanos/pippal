@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 from . import plugins
 from .config import DEFAULT_CONFIG
 from .engines.base import TTSBackend
+from .i18n import t as _t
 from .paths import TEMP_DIR
 from .text_utils import split_sentences
 from .timing import (
@@ -252,7 +253,7 @@ def _prepare_first_chunk(
     if not engine._synthesize(session.chunks[0], session.chunk_paths[0], backend=session.backend):
         ov = engine._overlay()
         if ov is not None:
-            ov.show_message("Synthesis failed")
+            ov.show_message(_t("overlay.msg.synthesis_failed"))
         return False
     if engine._is_cancelled(my_token):
         safe_unlink(session.chunk_paths[0])

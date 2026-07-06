@@ -134,6 +134,13 @@
   "overlay.loading.smoothing": "[!! Šɱóóŧĥíñǧ óúŧ ŧĥé šýļļáƀļéš… áéíóúàèìòùá !!]",
   "overlay.loading.calibrating": "[!! Çáļíƀŕáŧíñǧ ŧĥé šŧóŕýŧéļļéŕ… áéíóúàèìòùá !!]",
   "overlay.loading.intonation": "[!! Ǧáŧĥéŕíñǧ ŧĥé ŕíǧĥŧ íñŧóñáŧíóñ… áéíóúàèìòùáé !!]",
+  "overlay.msg.no_text_selected": "[!! Ñó ŧéẋŧ šéļéçŧéđ áéíóúà !!]",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "[!! Ɋúéúéđ — {count} ƥéñđíñǧ áéíóúàèìòù !!]",
+    "other": "[!! Ɋúéúéđ — {count} ƥéñđíñǧ áéíóúàèìòù !!]"
+  },
+  "overlay.msg.synthesis_failed": "[!! Šýñŧĥéšíš ƒáíļéđ áéíóúà !!]",
   "voices.window_title": "[!! Ṽóíçéš áé !!]",
   "voices.filter.all_langs": "[!! Áļļ ļáñǧúáǧéš áéíóú !!]",
   "voices.filter.lang_label": "[!! Ļáñǧúáǧé áéí !!]",

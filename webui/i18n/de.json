@@ -146,6 +146,13 @@
   "overlay.loading.smoothing": "Silben glätten…",
   "overlay.loading.calibrating": "Erzähler kalibrieren…",
   "overlay.loading.intonation": "Richtige Betonung sammeln…",
+  "overlay.msg.no_text_selected": "Kein Text ausgewählt",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "In Warteschlange — {count} ausstehend",
+    "other": "In Warteschlange — {count} ausstehend"
+  },
+  "overlay.msg.synthesis_failed": "Synthese fehlgeschlagen",
 
   "voices.window_title": "Stimmen",
   "voices.filter.all_langs": "Alle Sprachen",

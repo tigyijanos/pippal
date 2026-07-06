@@ -146,6 +146,13 @@
   "overlay.loading.smoothing": "Suavizando as sílabas…",
   "overlay.loading.calibrating": "Calibrando o narrador…",
   "overlay.loading.intonation": "Reunindo a entonação certa…",
+  "overlay.msg.no_text_selected": "Nenhum texto selecionado",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "Na fila — {count} pendente",
+    "other": "Na fila — {count} pendentes"
+  },
+  "overlay.msg.synthesis_failed": "Falha na síntese",
 
   "voices.window_title": "Vozes",
   "voices.filter.all_langs": "Todos os idiomas",

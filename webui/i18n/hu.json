@@ -146,6 +146,13 @@
   "overlay.loading.smoothing": "Elsimítjuk a szótagokat…",
   "overlay.loading.calibrating": "Kalibráljuk a mesélőt…",
   "overlay.loading.intonation": "Gyűjtjük a megfelelő hanglejtést…",
+  "overlay.msg.no_text_selected": "Nincs kijelölt szöveg",
+  "overlay.msg.queued": {
+    "_plural": "count",
+    "one": "Sorban — {count} várakozik",
+    "other": "Sorban — {count} várakozik"
+  },
+  "overlay.msg.synthesis_failed": "A szintézis sikertelen",
 
   "voices.window_title": "Hangok",
   "voices.filter.all_langs": "Minden nyelv",

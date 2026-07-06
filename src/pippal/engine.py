@@ -24,6 +24,7 @@ from typing import Any, Protocol
 from . import clipboard_capture, playback, plugins
 from .engines import TTSBackend, make_backend
 from .history import add_history
+from .i18n import t
 from .onboarding import (
     SELECTED_TEXT_CAPTURE_FAILURE,
     build_activation_readiness,
@@ -513,7 +514,7 @@ class TTSEngine:
         if not text:
             self._record_activation_capture_failure()
             if ov is not None:
-                ov.show_message("No text selected")
+                ov.show_message(t("overlay.msg.no_text_selected"))
             return
 
         # Text is non-empty: show the loading overlay now (capture already
@@ -538,7 +539,7 @@ class TTSEngine:
         if not text:
             ov = self._overlay()
             if ov is not None:
-                ov.show_message("No text selected")
+                ov.show_message(t("overlay.msg.no_text_selected"))
             return
         # Text is non-empty: show the loading overlay now (capture already
         # done while the user's app had focus).
@@ -551,7 +552,7 @@ class TTSEngine:
         if speaking:
             ov = self._overlay()
             if ov is not None:
-                ov.show_message(f"Queued — {qlen} pending")
+                ov.show_message(t("overlay.msg.queued", {"count": qlen}))
             return
         # Idle → behave like Read. begin_action_overlay() was called above
         # after capture returned non-empty text; keep that loading state (do
