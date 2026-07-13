@@ -25,7 +25,7 @@ _plugins.load_extension_plugins()
 # Define the package version BEFORE importing the web UI: the web bridge
 # does ``from .. import __version__`` at import time, so the name must
 # already exist on the partially-initialised package.
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from .engine import TTSEngine
 from .web_ui.app_web import main
