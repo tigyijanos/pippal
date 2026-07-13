@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .paths import CONFIG_PATH
+from .paths import CONFIG_PATH, VOICES_DIR
+from .voices import is_installed_voice
 
 # All hotkey-driven actions, in user-facing order. Single source of truth
 # for the eight global shortcuts: the engine reads from here for
@@ -25,10 +26,14 @@ from .paths import CONFIG_PATH
 # iterate `plugins.hotkey_actions()`.
 
 
+_DEFAULT_LJSPEECH_VOICE = "en_US-ljspeech-high.onnx"
+_LEGACY_IMPLICIT_DEFAULT_VOICE = "en_US-ryan-high.onnx"
+
+
 DEFAULT_CONFIG: dict[str, Any] = {
     "brand_name": "PipPal",
     "engine": "piper",                      # "piper" | (any plugin-registered)
-    "voice": "en_US-ljspeech-high.onnx",    # Piper voice file (public-domain default, #157)
+    "voice": _DEFAULT_LJSPEECH_VOICE,        # Piper voice file (public-domain default, #157)
     "length_scale": 1.0,
     "noise_scale": 0.667,
     "noise_w": 0.8,
@@ -77,6 +82,20 @@ def _layered_defaults() -> dict[str, Any]:
     return merged
 
 
+def _effective_config(
+    defaults: dict[str, Any], overrides: dict[str, Any], *, voices_dir: Path
+) -> dict[str, Any]:
+    """Layer overrides while preserving 0.3.0's usable implicit Ryan voice."""
+    effective = {**defaults, **overrides}
+    if "voice" in overrides or effective.get("voice") != _DEFAULT_LJSPEECH_VOICE:
+        return effective
+    if not is_installed_voice(
+        _DEFAULT_LJSPEECH_VOICE, voices_dir=voices_dir
+    ) and is_installed_voice(_LEGACY_IMPLICIT_DEFAULT_VOICE, voices_dir=voices_dir):
+        return {**effective, "voice": _LEGACY_IMPLICIT_DEFAULT_VOICE}
+    return effective
+
+
 def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
     """Load the effective config = layered defaults + user overrides.
 
@@ -88,7 +107,7 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
     off."""
     defaults = _layered_defaults()
     if not path.exists():
-        return dict(defaults)
+        return _effective_config(defaults, {}, voices_dir=VOICES_DIR)
     try:
         data = json.loads(path.read_text("utf-8"))
     except Exception as e:
@@ -101,12 +120,10 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
             pass
         print(f"[config] {path} unreadable ({e}); moved to {backup}",
               file=sys.stderr)
-        return dict(defaults)
+        return _effective_config(defaults, {}, voices_dir=VOICES_DIR)
     if not isinstance(data, dict):
-        return dict(defaults)
-    effective = dict(defaults)
-    effective.update(data)
-    return effective
+        return _effective_config(defaults, {}, voices_dir=VOICES_DIR)
+    return _effective_config(defaults, data, voices_dir=VOICES_DIR)
 
 
 def save_config(cfg: dict[str, Any], path: Path = CONFIG_PATH) -> None:
