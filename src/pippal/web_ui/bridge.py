@@ -1,5 +1,4 @@
 """JS <-> Python bridge for the web UI.
-
 Every method here maps onto the EXISTING backend; none of them change
 backend behaviour. The same object is exposed two ways:
 
@@ -38,11 +37,12 @@ from ..onboarding import (
 from ..paths import VOICES_DIR
 from ..voices import installed_voices, locale_name, voice_filename
 from .bridge_diag_settings import DiagSettingsBridgeMixin
+from .bridge_piper_speakers import PiperSpeakersBridgeMixin
 from .i18n_view import language_config_view
 from .overlay_state import WebOverlay
 
 
-class PipPalBridge(DiagSettingsBridgeMixin):
+class PipPalBridge(PiperSpeakersBridgeMixin, DiagSettingsBridgeMixin):
     """Backend facade the web frontend talks to.
 
     ``engine`` is the real :class:`pippal.engine.TTSEngine`. ``overlay``

@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "安装语音…",
   "settings.voice.hint_installed": "Piper 语音。点击“管理”从精选列表中安装更多。",
   "settings.voice.hint_empty": "尚未安装 Piper 语音。点击“安装语音”下载一个。",
+  "settings.voice.speaker_search": "搜索说话人",
+  "settings.voice.speaker_label": "说话人",
+  "settings.voice.speaker_hint": "共有 {total} 位说话人。最多显示 {limit} 位；可按说话人编号搜索。",
 
   "settings.speech.title": "朗读",
   "settings.speech.speed_label": "速度",

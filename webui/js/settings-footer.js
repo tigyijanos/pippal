@@ -39,6 +39,9 @@ export function collectSettingsValues() {
   };
   // Voice: plain Piper engine only (no Kokoro branch in free).
   if (c.voice && c.voice.value) values.voice = c.voice.value;
+  if (c.piper_speaker_ids) {
+    values.piper_speaker_ids = c.piper_speaker_ids.value;
+  }
   Object.keys(c).forEach(function (k) {
     if (k.indexOf("hotkey_") === 0)
       values[k] = (c[k].value || "").trim().toLowerCase();

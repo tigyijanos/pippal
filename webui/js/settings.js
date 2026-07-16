@@ -15,7 +15,7 @@ import {
 } from "./app-core.js";
 import { buildLanguageCard, buildDiagCard } from "./settings-cards.js";
 import { ctxText } from "./settings-footer.js";
-
+import { buildPiperSpeakerRow } from "./piper-speakers.js";
 // ------------------------------------------------------------------
 // Promotional URLs — kept as named constants for clarity and testability.
 // ------------------------------------------------------------------
@@ -103,7 +103,6 @@ export function renderSettings() {
     if (!voices.length) voiceSel.disabled = true;
     settingsState.controls.engine = engineSel;
     settingsState.controls.voice = voiceSel;
-
     var manageBtn = U.el("button", {
       testid: "settings-manage-voices",
       text: voices.length
@@ -130,6 +129,7 @@ export function renderSettings() {
         voiceSel,
         manageBtn,
       ]),
+      buildPiperSpeakerRow(voiceSel, engineSel, cfg),
       engineHint,
     ]);
 
@@ -162,7 +162,7 @@ export function renderSettings() {
           voiceSel.disabled = !voices.length;
           engineHint.textContent = voices.length
             ? t("settings.voice.hint_installed")
-            : t("settings.voice.hint_empty");
+            : t("settings.voice.hint_empty"); voiceSel.dispatchEvent(new CustomEvent("change"));
         })
         .catch(fail);
     }

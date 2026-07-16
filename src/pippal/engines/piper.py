@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ..config import DEFAULT_CONFIG
 from ..paths import PIPER_DIR, PIPER_EXE, VOICES_DIR
+from ..piper_speakers import selected_speaker_id
 from ..voices import is_installed_voice
 from .base import TTSBackend
 
@@ -44,6 +45,9 @@ class PiperBackend(TTSBackend):
             "--noise_scale", str(self.config.get("noise_scale", 0.667)),
             "--noise_w", str(self.config.get("noise_w", 0.8)),
         ]
+        speaker_id = selected_speaker_id(self.config, voice, voices_dir=VOICES_DIR)
+        if speaker_id is not None:
+            cmd.extend(["--speaker", str(speaker_id)])
         try:
             proc = subprocess.run(
                 cmd,

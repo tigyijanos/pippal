@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "Hangok telepítése…",
   "settings.voice.hint_installed": "Piper-hang. A válogatott listáról továbbiak telepítéséhez kattintson a Kezelés gombra.",
   "settings.voice.hint_empty": "Még nincs telepítve Piper-hang. Egy hang letöltéséhez kattintson a Hangok telepítése gombra.",
+  "settings.voice.speaker_search": "Beszélők keresése",
+  "settings.voice.speaker_label": "Beszélő",
+  "settings.voice.speaker_hint": "{total} beszélő érhető el. Legfeljebb {limit} látható; keressen a beszélő azonosítójára.",
 
   "settings.speech.title": "Beszéd",
   "settings.speech.speed_label": "Sebesség",

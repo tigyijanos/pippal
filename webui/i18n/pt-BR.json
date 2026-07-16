@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "Instalar vozes…",
   "settings.voice.hint_installed": "Voz do Piper. Clique em “Gerenciar” para instalar mais da lista selecionada.",
   "settings.voice.hint_empty": "Nenhuma voz do Piper instalada ainda. Clique em “Instalar vozes” para baixar uma.",
+  "settings.voice.speaker_search": "Pesquisar locutores",
+  "settings.voice.speaker_label": "Locutor",
+  "settings.voice.speaker_hint": "{total} locutores disponíveis. Exibindo até {limit}; pesquise pelo número do locutor.",
 
   "settings.speech.title": "Fala",
   "settings.speech.speed_label": "Velocidade",

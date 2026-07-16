@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "Install voices…",
   "settings.voice.hint_installed": "Piper voice. Click Manage to install more from the curated list.",
   "settings.voice.hint_empty": "No Piper voice installed yet. Click Install voices to download one.",
+  "settings.voice.speaker_search": "Search speakers",
+  "settings.voice.speaker_label": "Speaker",
+  "settings.voice.speaker_hint": "{total} speakers available. Showing up to {limit}; search by speaker number.",
 
   "settings.speech.title": "Speech",
   "settings.speech.speed_label": "Speed",

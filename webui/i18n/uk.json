@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "Встановити голоси…",
   "settings.voice.hint_installed": "Голос Piper. Натисніть «Керувати», щоб встановити більше з дібраного списку.",
   "settings.voice.hint_empty": "Голос Piper ще не встановлено. Натисніть «Встановити голоси», щоб завантажити один.",
+  "settings.voice.speaker_search": "Пошук дикторів",
+  "settings.voice.speaker_label": "Диктор",
+  "settings.voice.speaker_hint": "Доступно дикторів: {total}. Показано до {limit}; шукайте за номером диктора.",
 
   "settings.speech.title": "Мовлення",
   "settings.speech.speed_label": "Швидкість",

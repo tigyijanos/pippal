@@ -30,6 +30,9 @@
   "settings.voice.install_voices": "Stimmen installieren…",
   "settings.voice.hint_installed": "Piper-Stimme. Klicken Sie auf „Verwalten“, um weitere aus der kuratierten Liste zu installieren.",
   "settings.voice.hint_empty": "Noch keine Piper-Stimme installiert. Klicken Sie auf „Stimmen installieren“, um eine herunterzuladen.",
+  "settings.voice.speaker_search": "Sprecher suchen",
+  "settings.voice.speaker_label": "Sprecher",
+  "settings.voice.speaker_hint": "{total} Sprecher verfügbar. Bis zu {limit} werden angezeigt; suchen Sie nach der Sprechernummer.",
 
   "settings.speech.title": "Sprachausgabe",
   "settings.speech.speed_label": "Geschwindigkeit",
