@@ -1,6 +1,6 @@
 # PipPal — one-shot setup for Windows.
 #
-# Downloads the Piper binary, the default voice (en_US-ryan-high), and
+# Downloads the Piper binary, the default voice (en_US-ljspeech-high), and
 # installs the Python dependencies. Safe to re-run; skips files that
 # already exist.
 
@@ -41,15 +41,15 @@ if (-not (Test-Path $piperExe)) {
 $dataRoot = Resolve-PipPalDataRoot
 $voicesDir = Join-Path $dataRoot 'voices'
 New-Item -ItemType Directory -Force -Path $voicesDir | Out-Null
-$voiceOnnx = Join-Path $voicesDir 'en_US-ryan-high.onnx'
-$voiceJson = Join-Path $voicesDir 'en_US-ryan-high.onnx.json'
+$voiceOnnx = Join-Path $voicesDir 'en_US-ljspeech-high.onnx'
+$voiceJson = Join-Path $voicesDir 'en_US-ljspeech-high.onnx.json'
 if (-not (Test-Path $voiceOnnx)) {
-    Write-Host "Downloading default voice (en_US-ryan-high, ~120 MB)..." -ForegroundColor Yellow
+    Write-Host "Downloading default voice (en_US-ljspeech-high, ~120 MB)..." -ForegroundColor Yellow
     Invoke-WebRequest `
-        -Uri 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx' `
+        -Uri 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/high/en_US-ljspeech-high.onnx' `
         -OutFile $voiceOnnx
     Invoke-WebRequest `
-        -Uri 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx.json' `
+        -Uri 'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/high/en_US-ljspeech-high.onnx.json' `
         -OutFile $voiceJson
     Write-Host "Voice installed at: $voiceOnnx" -ForegroundColor Green
 } else {

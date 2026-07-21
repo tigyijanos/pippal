@@ -1,5 +1,39 @@
 # PipPal Changelog
 
+## 0.3.1 - 2026-07-21
+
+Release date: 2026-07-21
+
+- Upgrade compatibility: keeps the complete Ryan voice selected for users
+  upgrading from 0.3.0 when the new default voice is not installed. Explicit
+  voice selections continue to win.
+- Localization: adds the language picker and localized catalogs for German,
+  Hungarian, Portuguese (Brazil), Simplified Chinese, Ukrainian, and English,
+  with persisted startup language and plural handling in Python and JavaScript.
+- Voice setup: installs the default voice for the selected UI language and
+  localizes Voice Manager language and quality labels.
+- LibriTTS: exposes the model's multi-speaker catalog so compatible clients
+  can offer hundreds of English speaker choices from one installed voice.
+- Reading UI: handles CJK karaoke segmentation and removes remaining hard-coded
+  overlay and hotkey labels from localized surfaces.
+- Voice licensing: uses public-domain LJSpeech as the English default for new
+  installations and removes non-commercial voices from the built-in catalog.
+- Packaging: aligns package, application, installer, and manual release-workflow
+  metadata on 0.3.1. The workflow uploads only to an existing `v0.3.1` release.
+
+## 0.3.0 - 2026-06-28
+
+Release date: 2026-06-28
+
+- Reworked the reader, overlay, onboarding, and Settings surfaces around the
+  web UI architecture shipped by the `v0.3.0` tag.
+- Fixed pause/resume timing, forward/back navigation, loading-state ordering,
+  and reading-state updates across chunk boundaries.
+- Added local diagnostic collection and its Settings surfaces, including
+  privacy and non-blocking regression coverage.
+- Restored the startup tray notification and expanded release-critical UI,
+  playback, window-lifecycle, and packaged-data test coverage.
+
 ## 0.2.4 - 2026-05-15
 
 Release date: 2026-05-15

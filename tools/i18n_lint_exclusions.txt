@@ -1,0 +1,56 @@
+# i18n_lint sanctioned exclusions — CORE (pippal-public)
+# --------------------------------------------------------------------------
+# Each line documents a user-facing-looking literal that the --scan-literals
+# gate would otherwise flag but that is deliberately NOT catalog-keyed. Every
+# entry is sanctioned by docs/strings-inventory.md ("Deliberately NOT extracted")
+# or is a brand / technical identifier. A NEW literal that is not listed here
+# fails the build; adding an entry requires a justification comment.
+#
+# Format:
+#   literal:<exact text>          exclude this exact literal anywhere
+#   file:<relpath>::<exact text>  exclude this literal only in that file
+#   <exact text>                  shorthand for literal:
+
+# Brand identifier "PipPal" — product name, kept English by the glossary. The
+# overlay mini-player header label renders the brand verbatim (window titles
+# ARE keyed but resolve to "PipPal").
+file:webui/js/overlay.js::PipPal
+
+# Voice-Manager status FILTER option: the array holds the option *value ids*
+# ("Any" / "Installed" / "Not installed"); the visible label is rendered via
+# t("voices.filter.status_*") (statLabels map). The id string is technical, not
+# copy — the `|| s` is only a defensive fallback.
+file:webui/js/voices.js::Not installed
+
+# Windows shell-integration label written to the registry at registration time
+# ("Read with PipPal" right-click entry). Not a web-UI render surface; contains
+# the brand. Localising the shell verb is out of scope for the 0.3.1 web-UI i18n.
+file:src/pippal/context_menu.py::Read with PipPal
+
+# Cross-module STATUS SENTINEL: engine.py records it as the activation
+# last_failure and it is compared by value across modules/tests, so it stays a
+# stable English constant. It reaches the user only wrapped by the keyed
+# onboarding.recovery template (which carries a {failure} placeholder).
+# (docs/strings-inventory.md, "Deliberately NOT extracted".)
+file:src/pippal/onboarding.py::No selected text was captured.
+
+# NOTE: NO_VOICE_SCRIPT (onboarding.py) is paired with a bundled English WAV and
+# is also a documented exclusion, but it is authored as an indented multi-line
+# implicit-concatenation constant, so the scanner (module-level col-0 heuristic)
+# does not flag it — no entry is required.
+
+# --------------------------------------------------------------------------
+# T-208 Python-side raise-passthrough exclusions (bridge.py).
+# --------------------------------------------------------------------------
+# Diagnostic invariant guards whose RuntimeError text a bridge surfaces via
+# str(exc) — but only inside the KEYED voice.status.failed frame ({error}
+# placeholder) or on a can't-happen-from-UI path. "unknown voice"/"unknown
+# overlay action" fire only when an id/tag that originates in code or a server-
+# rendered list is invalid (never free user input); the phrasing is non-sentence
+# developer text. Defensive keying would be noise (see the Pro linter's matching
+# bridge-guard exclusions). NOTE: 'empty response for {dlabel}' is a network-
+# failure passthrough detail — flagged here for optional later extraction, but
+# consistent with the sanctioned raise-passthrough-detail class for now.
+file:src/pippal/web_ui/bridge.py::unknown voice: {voice_id}
+file:src/pippal/web_ui/bridge.py::empty response for {dlabel}
+file:src/pippal/web_ui/bridge.py::unknown overlay action: {tag}

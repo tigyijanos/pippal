@@ -11,9 +11,9 @@
 # 3. pip install the package + runtime deps + PyInstaller.
 # 4. pyinstaller packaging/pippal.spec  -> dist/PipPal/
 # 5. Install Inno Setup via Chocolatey.
-# 6. ISCC packaging/installer/pippal.iss  -> dist/PipPal-Setup-0.3.0.exe
+# 6. ISCC packaging/installer/pippal.iss  -> dist/PipPal-Setup-0.3.1.exe
 # 7. Upload the installer as a workflow artifact (retained 30 days).
-# 8. If a v0.3.0 GitHub Release already exists, attach the installer to it.
+# 8. If a v0.3.1 GitHub Release already exists, attach the installer to it.
 
 name: Build Windows Installer
 
@@ -131,12 +131,12 @@ jobs:
           & $iscc "packaging\installer\pippal.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
 
-          $installer = "dist\PipPal-Setup-0.3.0.exe"
+          $installer = "dist\PipPal-Setup-0.3.1.exe"
           if (-not (Test-Path $installer)) {
             throw "Installer not found at $installer after ISCC run."
           }
           $size = (Get-Item $installer).Length
-          Write-Host "dist\PipPal-Setup-0.3.0.exe: $size bytes"
+          Write-Host "dist\PipPal-Setup-0.3.1.exe: $size bytes"
 
       # ------------------------------------------------------------------
       # 7. Upload installer as a workflow artifact (30-day retention)
@@ -144,20 +144,20 @@ jobs:
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PipPal-Setup-0.3.0
-          path: dist/PipPal-Setup-0.3.0.exe
+          name: PipPal-Setup-0.3.1
+          path: dist/PipPal-Setup-0.3.1.exe
           retention-days: 30
 
       # ------------------------------------------------------------------
-      # 8. Attach to GitHub Release (only if v0.3.0 release already exists)
+      # 8. Attach to GitHub Release (only if v0.3.1 release already exists)
       # ------------------------------------------------------------------
-      - name: Attach to GitHub Release (if v0.3.0 exists)
+      - name: Attach to GitHub Release (if v0.3.1 exists)
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag       = "v0.3.0"
-          $installer = "dist\PipPal-Setup-0.3.0.exe"
+          $tag       = "v0.3.1"
+          $installer = "dist\PipPal-Setup-0.3.1.exe"
 
           # gh release view exits non-zero when the tag/release doesn't exist.
           gh release view $tag 2>$null

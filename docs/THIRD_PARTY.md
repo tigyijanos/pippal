@@ -37,10 +37,24 @@ when the user runs it for the first time.
 ### Piper voices
 
 - Catalogue: <https://huggingface.co/rhasspy/piper-voices>
-- Licences: **per voice** — see each voice's model card. Most of the
-  curated voices in the Voice Manager are MIT or research-permissive
-  (LibriTTS / LibriTTS-R / VCTK derivatives). PipPal does not ship
+- Licences: **per voice** — see each voice's model card. PipPal does not ship
   voice files; the user downloads them on demand.
+
+#### Plain LibriTTS voice attribution
+
+PipPal offers the from-scratch `en_US-libritts-high` Piper model as an optional
+download. It uses the **LibriTTS** dataset, licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Dataset/source:
+[OpenSLR 60 — LibriTTS](https://www.openslr.org/60/). Piper model card:
+[`en_US-libritts-high`](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/libritts/high/MODEL_CARD).
+Dataset authors: **Heiga Zen et al.**
+This notice supplies the required attribution; downstream redistributors must
+retain it.
+
+`en_US-libritts_r-medium` is a different model. Its Piper model card records
+fine-tuning from the Lessac medium voice, so it retains the Lessac-lineage gray
+zone and is not treated as equivalent to the from-scratch LibriTTS model:
+[`en_US-libritts_r-medium`](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/libritts_r/medium/MODEL_CARD).
 
 ### ONNX Runtime (bundled inside the Piper release)
 

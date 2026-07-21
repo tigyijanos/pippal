@@ -10,12 +10,12 @@ from pippal import voices
 class TestVoiceUrlBase:
     def test_en_us(self):
         v: voices.PiperVoice = {
-            "id": "en_US-ryan-high", "lang": "en_US",
-            "name": "ryan", "quality": "high", "label": "x",
+            "id": "en_US-ljspeech-high", "lang": "en_US",
+            "name": "ljspeech", "quality": "high", "label": "x",
         }
         assert voices.voice_url_base(v) == (
             "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
-            "en/en_US/ryan/high/"
+            "en/en_US/ljspeech/high/"
         )
 
     def test_hu_hu(self):
@@ -31,10 +31,28 @@ class TestVoiceUrlBase:
 
 def test_voice_filename():
     v: voices.PiperVoice = {
-        "id": "en_US-ryan-high", "lang": "en_US",
-        "name": "ryan", "quality": "high", "label": "x",
+        "id": "en_US-ljspeech-high", "lang": "en_US",
+        "name": "ljspeech", "quality": "high", "label": "x",
     }
-    assert voices.voice_filename(v) == "en_US-ryan-high.onnx"
+    assert voices.voice_filename(v) == "en_US-ljspeech-high.onnx"
+
+
+class TestCatalogLicenseHygiene:
+    """#157: NC / research-only voices must not be offered; the new
+    public-domain EN default must be present."""
+
+    def test_nc_and_research_voices_not_offered(self):
+        ids = {v["id"] for v in voices.KNOWN_VOICES}
+        assert "en_US-ryan-high" not in ids
+        assert "en_US-ryan-medium" not in ids
+        assert "en_US-lessac-high" not in ids
+
+    def test_public_domain_default_is_offered(self):
+        ids = {v["id"] for v in voices.KNOWN_VOICES}
+        assert "en_US-ljspeech-high" in ids
+
+    def test_preferred_en_default_is_ljspeech(self):
+        assert voices.PREFERRED_DEFAULT_VOICE["en"] == "en_US-ljspeech-high"
 
 
 def test_is_installed_voice_requires_model_and_sidecar(tmp_path: Path):
@@ -73,7 +91,10 @@ class TestLangToPiper:
 
 class TestFindPiperVoiceForLanguage:
     def test_finds_matching_voice(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-        # Stub installed_voices() to a controlled list.
+        # Stub installed_voices() to a controlled list. NOTE (#157):
+        # ``en_US-ryan-high`` is no longer in the offered catalog, but an
+        # already-installed copy must still resolve/play — this asserts that
+        # resolution keys off installed files, not catalog membership.
         monkeypatch.setattr(
             voices, "installed_voices",
             lambda: ["hu_HU-anna-medium.onnx", "en_US-ryan-high.onnx"],

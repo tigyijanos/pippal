@@ -6,6 +6,7 @@
 import {
   U,
   API,
+  t,
   toast,
   fail,
   handleCloseWindowFailure,
@@ -19,11 +20,9 @@ import {
 } from "./settings.js";
 
 export function ctxText(status) {
-  if (status === "all")
-    return "✓ Right-click entry installed for .txt and .md.";
-  if (status === "partial")
-    return "⚠ Partial install — re-run Install to fix.";
-  return "○ Right-click entry not installed.";
+  if (status === "all") return t("settings.integration.status_all");
+  if (status === "partial") return t("settings.integration.status_partial");
+  return t("settings.integration.status_none");
 }
 
 export function collectSettingsValues() {
@@ -40,6 +39,9 @@ export function collectSettingsValues() {
   };
   // Voice: plain Piper engine only (no Kokoro branch in free).
   if (c.voice && c.voice.value) values.voice = c.voice.value;
+  if (c.piper_speaker_ids) {
+    values.piper_speaker_ids = c.piper_speaker_ids.value;
+  }
   Object.keys(c).forEach(function (k) {
     if (k.indexOf("hotkey_") === 0)
       values[k] = (c[k].value || "").trim().toLowerCase();
@@ -51,14 +53,14 @@ export function persist(close) {
   return API.call("save_config", collectSettingsValues(), close)
     .then(function (r) {
       if (r && r.hotkey_failures && r.hotkey_failures.length) {
-        toast("Saved, but some hotkeys could not be bound.", true);
+        toast(t("settings.save.hotkey_fail"), true);
       } else {
-        toast(close ? "Saved." : "Applied.");
+        toast(close ? t("settings.save.saved") : t("settings.save.applied"));
       }
       if (close) {
         return API.call("close_window").catch(function (e) {
           return handleCloseWindowFailure(
-            "Could not close settings window after save.",
+            t("errors.close_settings_after_save"),
             e,
             renderSettings,
           );
@@ -76,22 +78,19 @@ export function wireFooter() {
   document.getElementById("btn-apply").addEventListener("click", function () {
     persist(false);
   });
-  document
-    .getElementById("btn-cancel")
-    .addEventListener("click", function () {
-      API.call("close_window").catch(function (e) {
-        return handleCloseWindowFailure(
-          "Could not close settings window.",
-          e,
-          renderSettings,
-        );
-      });
+  document.getElementById("btn-cancel").addEventListener("click", function () {
+    API.call("close_window").catch(function (e) {
+      return handleCloseWindowFailure(
+        t("errors.close_settings"),
+        e,
+        renderSettings,
+      );
     });
+  });
   document.getElementById("btn-reset").addEventListener("click", function () {
     confirmDialog(
-      "Reset to defaults",
-      "Reset every field to its built-in default? " +
-        "Click Apply or Save afterwards to keep them.",
+      t("settings.reset.confirm_title"),
+      t("settings.reset.confirm_body"),
     ).then(function (ok) {
       if (!ok) return;
       var d = settingsState.defaults,
@@ -130,7 +129,7 @@ export function wireFooter() {
         var s = document.querySelector('[data-testid="' + id + '"]');
         if (s) s.dispatchEvent(new Event("input"));
       });
-      toast("Reset to defaults — click Apply or Save to keep them.");
+      toast(t("settings.reset.toast"));
     });
   });
 }

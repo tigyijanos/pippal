@@ -54,6 +54,7 @@ rest of ``e2e/web/`` and is held strictly here:
 
 from __future__ import annotations
 
+import json
 import socket
 import struct
 import threading
@@ -62,6 +63,11 @@ from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
+
+# i18n oracle (T-301): assert rendered UI text against the shipped English
+# catalog, never a hardcoded literal, so the suite stays language-agnostic.
+_WEBUI = Path(__file__).resolve().parents[2] / "webui"
+EN = json.loads((_WEBUI / "i18n" / "en.json").read_text("utf-8"))
 
 # ===========================================================================
 # Shared helpers
@@ -363,7 +369,7 @@ def test_voice_manager_row_install_failure_ui(
         vid = cat["voices"][0]["id"]
         btn = page.get_by_test_id(f"vm-action-{vid}")
         status = page.get_by_test_id(f"vm-status-{vid}")
-        expect(btn).to_have_text("Install")
+        expect(btn).to_have_text(EN["voices.action.install"])
 
         step(f"click per-row Install for {vid} (real installer, real "
              "network failure)")
@@ -371,7 +377,7 @@ def test_voice_manager_row_install_failure_ui(
 
         # app.js doInstall().catch: status -> "failed" (err class),
         # button re-enabled, fail() error toast.
-        expect(status).to_have_text("failed", timeout=12000)
+        expect(status).to_have_text(EN["voices.status.failed"], timeout=12000)
         expect(status).to_have_class("vstatus err")
         expect(btn).to_be_enabled()
         toast = page.get_by_test_id("toast")

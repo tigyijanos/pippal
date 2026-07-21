@@ -40,6 +40,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect
 
+# i18n oracle (T-301): assert rendered UI text against the shipped English
+# catalog, never a hardcoded literal, so the suite stays language-agnostic.
+_WEBUI = Path(__file__).resolve().parents[2] / "webui"
+EN = json.loads((_WEBUI / "i18n" / "en.json").read_text("utf-8"))
+
 
 def _config_on_disk(profile: Path) -> dict:
     cfg = profile / "config.json"
@@ -204,16 +209,19 @@ def _start_reading_session(page: Page, app_url: str, step=None) -> None:
 # Settings
 # ---------------------------------------------------------------------------
 
-def test_settings_renders_eight_cards(page: Page, app_url: str, step):
+def test_settings_renders_nine_cards(page: Page, app_url: str, step):
     _goto(page, app_url, "settings", step)
     titles = page.locator(".card-title")
-    expect(titles).to_have_count(8)
-    step.check("8 settings cards rendered (.card-title == 8)")
+    # Nine cards: Voice, Language (0.3.1 i18n), Speech, Hotkeys, Reader
+    # panel, Windows integration, Diagnostics, Open-source notices, About.
+    expect(titles).to_have_count(9)
+    step.check("9 settings cards rendered (.card-title == 9)")
     expect(page.get_by_test_id("settings-engine")).to_be_visible()
+    expect(page.get_by_test_id("settings-language")).to_be_visible()
     expect(page.get_by_test_id("settings-save")).to_be_visible()
-    step.check("engine combo + Save button visible")
+    step.check("engine combo + language picker + Save button visible")
     # The promo banner appears at the top of the Settings view (above the
-    # 8 cards); it uses testid settings-promo and is NOT a card-title node.
+    # cards); it uses testid settings-promo and is NOT a card-title node.
     expect(page.get_by_test_id("settings-promo")).to_be_visible()
     step.check("settings-promo banner visible (above card rows)")
 
@@ -229,7 +237,8 @@ def test_settings_edit_persists_to_backend(page: Page, app_url: str, backend, st
         "el => { el.value = '1.25';"
         " el.dispatchEvent(new Event('input', {bubbles:true})); }"
     )
-    expect(page.get_by_test_id("settings-speed-value")).to_have_text("1.25×")
+    speed_label = f"{1.25:.2f}×"  # settings.js renders v.toFixed(2) + the multiplier sign
+    expect(page.get_by_test_id("settings-speed-value")).to_have_text(speed_label)
     step.check("speed value label shows 1.25×")
 
     step("set auto_hide_ms = 2400")
@@ -256,7 +265,7 @@ def test_settings_engine_and_voice_selection_persists(
 ):
     """The Voice card's Engine + Voice selectors must persist to the
     live config the engine reads, and (for a non-default value) to the
-    real config.json. ``en_US-ryan-high.onnx`` is the default voice so
+    real config.json. ``en_US-ljspeech-high.onnx`` is the default voice so
     ``save_config`` correctly omits it from disk; selecting a
     NON-default voice (en_US-amy-medium) proves the value really
     round-tripped through the bridge to disk."""
@@ -264,7 +273,7 @@ def test_settings_engine_and_voice_selection_persists(
 
     VOICES_DIR.mkdir(parents=True, exist_ok=True)
     made: list[Path] = []
-    for vid in ("en_US-ryan-high", "en_US-amy-medium"):
+    for vid in ("en_US-ljspeech-high", "en_US-amy-medium"):
         onnx = VOICES_DIR / f"{vid}.onnx"
         sidecar = VOICES_DIR / f"{vid}.onnx.json"
         onnx.write_bytes(b"stub-model")
@@ -306,7 +315,7 @@ def test_settings_engine_and_voice_selection_persists(
             p.unlink(missing_ok=True)
         # Restore the default voice in the shared session config so the
         # later reading-session tests aren't affected.
-        backend["config"]["voice"] = "en_US-ryan-high.onnx"
+        backend["config"]["voice"] = "en_US-ljspeech-high.onnx"
 
 
 def test_settings_hotkey_edit_rebinds_and_persists(
@@ -351,7 +360,7 @@ def test_reset_confirm_modal_gates_the_form(page: Page, app_url: str, backend, s
     step("click Reset to defaults")
     page.get_by_test_id("settings-reset").click()
     expect(page.get_by_test_id("confirm-modal")).to_be_visible()
-    expect(page.get_by_test_id("confirm-title")).to_have_text("Reset to defaults")
+    expect(page.get_by_test_id("confirm-title")).to_have_text(EN["settings.reset.confirm_title"])
     expect(auto_hide).to_have_value("5000")  # gate held
     step.check('confirm modal shown ("Reset to defaults"); field still 5000 (gate held)')
 
@@ -384,22 +393,22 @@ def test_voice_remove_confirm_modal_gates_deletion(
     from pippal.paths import VOICES_DIR
 
     VOICES_DIR.mkdir(parents=True, exist_ok=True)
-    onnx = VOICES_DIR / "en_US-ryan-high.onnx"
-    sidecar = VOICES_DIR / "en_US-ryan-high.onnx.json"
+    onnx = VOICES_DIR / "en_US-ljspeech-high.onnx"
+    sidecar = VOICES_DIR / "en_US-ljspeech-high.onnx.json"
     onnx.write_bytes(b"stub-model")
     sidecar.write_text("{}", "utf-8")
-    step.check("seeded real voice files on disk (en_US-ryan-high.onnx + sidecar)")
+    step.check("seeded real voice files on disk (en_US-ljspeech-high.onnx + sidecar)")
     try:
         _goto(page, app_url, "voices", step)
-        row_btn = page.get_by_test_id("vm-action-en_US-ryan-high")
-        expect(row_btn).to_have_text("Remove")  # catalogue sees it installed
+        row_btn = page.get_by_test_id("vm-action-en_US-ljspeech-high")
+        expect(row_btn).to_have_text(EN["voices.action.remove"])  # catalogue sees it installed
         step.check("catalogue row shows 'Remove' (sees it installed)")
 
         # Click Remove → modal appears, files still on disk (gate held).
-        step("click Remove on en_US-ryan-high")
+        step("click Remove on en_US-ljspeech-high")
         row_btn.click()
         expect(page.get_by_test_id("confirm-modal")).to_be_visible()
-        expect(page.get_by_test_id("confirm-title")).to_have_text("Remove voice")
+        expect(page.get_by_test_id("confirm-title")).to_have_text(EN["voices.remove.confirm_title"])
         expect(page.get_by_test_id("confirm-body")).to_contain_text("Remove")
         assert onnx.exists() and sidecar.exists()
         step.check("confirm modal shown; both files still on disk (gate held)")
@@ -413,7 +422,7 @@ def test_voice_remove_confirm_modal_gates_deletion(
 
         # Remove + accept → real bridge.remove_voice unlinks both files.
         step("click Remove again, then accept the modal")
-        page.get_by_test_id("vm-action-en_US-ryan-high").click()
+        page.get_by_test_id("vm-action-en_US-ljspeech-high").click()
         expect(page.get_by_test_id("confirm-modal")).to_be_visible()
         page.get_by_test_id("confirm-ok").click()
         expect(page.get_by_test_id("confirm-modal")).to_be_hidden()
@@ -447,13 +456,13 @@ def test_voice_manager_lists_catalogue(page: Page, app_url: str, backend, step):
 
 def test_voice_manager_search_filter(page: Page, app_url: str, step):
     _goto(page, app_url, "voices", step)
-    # "ryan" matches exactly one curated voice (en_US-ryan-high).
-    step('type "ryan" in the search box')
-    page.get_by_test_id("vm-search").fill("ryan")
+    # "ljspeech" matches exactly one curated voice (en_US-ljspeech-high).
+    step('type "ljspeech" in the search box')
+    page.get_by_test_id("vm-search").fill("ljspeech")
     rows = page.locator('#view [data-testid^="vm-action-"]')
     expect(rows).to_have_count(1)
-    expect(page.get_by_test_id("vm-action-en_US-ryan-high")).to_be_visible()
-    step.check('"ryan" → exactly 1 row (en_US-ryan-high)')
+    expect(page.get_by_test_id("vm-action-en_US-ljspeech-high")).to_be_visible()
+    step.check('"ljspeech" → exactly 1 row (en_US-ljspeech-high)')
 
     # A query that matches nothing shows the empty-state hint.
     step('type "zzzznotavoice" (matches nothing)')

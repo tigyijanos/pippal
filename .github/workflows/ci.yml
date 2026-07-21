@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, release/**]
 
 permissions:
   contents: read
@@ -26,7 +26,16 @@ jobs:
         run: python -m pip install --upgrade pip ruff
       - name: Run ruff
         shell: pwsh
-        run: ruff check src/pippal tests
+        run: ruff check src/pippal tests tools
+      # i18n gates (#337 T-302 + #338 T-303). Pure stdlib — the linter loads
+      # pippal/i18n/__init__.py directly (no package/deps install needed), so
+      # this stays in the cheap lint lane and runs in seconds.
+      - name: i18n lint — no hardcoded strings (T-302)
+        shell: pwsh
+        run: python tools/i18n_lint.py --scan-literals --repo core
+      - name: i18n lint — catalog completeness + core purity (T-303)
+        shell: pwsh
+        run: python tools/i18n_lint.py --check-catalogs --repo core
 
   # ----- Unit tests -----------------------------------------------------
   # 140 tests in tests/, benchmarks/ excluded by pytest.ini.

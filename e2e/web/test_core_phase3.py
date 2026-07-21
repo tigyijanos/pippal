@@ -92,6 +92,7 @@ Discipline (identical to the rest of ``e2e/web`` and held strictly):
 
 from __future__ import annotations
 
+import json
 import math
 import struct
 import wave
@@ -99,6 +100,11 @@ from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, expect
+
+# i18n oracle (T-301): assert rendered UI text against the shipped English
+# catalog, never a hardcoded literal, so the suite stays language-agnostic.
+_WEBUI = Path(__file__).resolve().parents[2] / "webui"
+EN = json.loads((_WEBUI / "i18n" / "en.json").read_text("utf-8"))
 
 # ===========================================================================
 # Shared helpers
@@ -477,10 +483,10 @@ def test_onboarding_already_complete_reentry_close_and_play_again(
     status = page.get_by_test_id("onboarding-status")
 
     # The real st.is_complete branch copy/classes (app.js:399,412-413).
-    expect(finish).to_have_text("Close")
+    expect(finish).to_have_text(EN["onboarding.btn.close"])
     expect(finish).to_be_enabled()
     expect(finish).to_have_class("primary")
-    expect(play).to_have_text("Play sample again")
+    expect(play).to_have_text(EN["onboarding.btn.play_again"])
     # The non-complete Play is primary; the already-complete one is NOT.
     assert "primary" not in (play.get_attribute("class") or ""), (
         "Play-sample-again must not be the primary button in the "
@@ -797,7 +803,7 @@ def test_ucc9_first_run_vm_install_completion_flips_onboarding_ready(
     from pippal.voices import voice_filename
     expected_file = voice_filename(bridge._voice_by_id(vid))
     btn = page.get_by_test_id(f"vm-action-{vid}")
-    expect(btn).to_have_text("Install")
+    expect(btn).to_have_text(EN["voices.action.install"])
     # PROVE NO TAUTOLOGY: the configured voice is NOT the to-be-installed
     # one before the install (the production callback must change it).
     assert cfg.get("voice") != expected_file, (
@@ -853,7 +859,7 @@ def test_ucc9_first_run_vm_install_completion_flips_onboarding_ready(
     # instead of the "needs a voice" nag.
     _goto(page, app_url, "onboarding", step)
     expect(page.get_by_test_id("onboarding-title")).to_have_text(
-        "PipPal is ready to read locally", timeout=15000
+        EN["onboarding.title.ready"], timeout=15000
     )
     # The missing_voice-only "Open Voice Manager" / "Install default
     # voice" buttons are gone; the ready-state Play sample is present.

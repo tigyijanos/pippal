@@ -11,7 +11,7 @@ The fixtures expect the runner to have these env vars set:
   PIPPAL_VOICE_DIR     directory containing the test voice's .onnx
                        and .onnx.json files
   PIPPAL_TEST_VOICE    the .onnx filename to test against
-                       (default: en_US-ryan-high.onnx)
+                       (default: en_US-ljspeech-high.onnx)
 
 The CI workflow downloads piper.exe + a voice model into a cached
 location and exports these vars before invoking pytest.
@@ -49,7 +49,7 @@ def voice_dir() -> Path:
 
 @pytest.fixture(scope="session")
 def test_voice(voice_dir: Path) -> str:
-    name = os.environ.get("PIPPAL_TEST_VOICE", "en_US-ryan-high.onnx")
+    name = os.environ.get("PIPPAL_TEST_VOICE", "en_US-ljspeech-high.onnx")
     if not (voice_dir / name).exists():
         pytest.fail(f"Test voice not found: {voice_dir / name}")
     return name

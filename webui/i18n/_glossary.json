@@ -1,0 +1,87 @@
+{
+  "_meta": {
+    "purpose": "Translation glossary for the PipPal core catalogs (T-105, issue #126). The reviewer's contract: which terms stay English and how the translated-but-locked terms render per language. Aligns with docs/I18N_DESIGN_0_3_1.md §5.8 and the human-readable docs/i18n-glossary.md.",
+    "languages": ["en", "zh-CN", "de", "hu", "uk", "pt-BR"]
+  },
+
+  "keep_english": {
+    "PipPal": "Brand name — never translated (design §1, §5.8).",
+    "Piper": "Local TTS engine name — kept English.",
+    "Ollama": "Product name — kept English (Pro surfaces; listed for cross-repo consistency).",
+    "GitHub": "Brand.",
+    "Reddit": "Brand (community link label localises the surrounding word only).",
+    "TTS": "Established technical initialism, kept across all languages.",
+    "PDF": "Format initialism, kept.",
+    "Windows": "OS product name, kept (declined/compounded per language grammar)."
+  },
+
+  "terms": {
+    "voice": {
+      "policy": "translate",
+      "de": "Stimme",
+      "hu": "hang",
+      "uk": "голос",
+      "zh-CN": "语音",
+      "pt-BR": "voz"
+    },
+    "engine": {
+      "policy": "translate-except-de",
+      "note": "TTS engine. German audio/TTS software conventionally keeps the loanword 'Engine' (die Engine); everyone else translates.",
+      "de": "Engine",
+      "hu": "motor",
+      "uk": "рушій",
+      "zh-CN": "引擎",
+      "pt-BR": "mecanismo"
+    },
+    "hotkey": {
+      "policy": "translate",
+      "de": "Tastenkürzel",
+      "hu": "gyorsbillentyű",
+      "uk": "гаряча клавіша",
+      "zh-CN": "快捷键",
+      "pt-BR": "atalho"
+    },
+    "tray": {
+      "policy": "translate",
+      "note": "System notification area / tray. Restart-hint surface (design §5.5).",
+      "de": "Infobereich",
+      "hu": "tálca",
+      "uk": "область сповіщень",
+      "zh-CN": "托盘",
+      "pt-BR": "bandeja"
+    },
+    "overlay / reader panel": {
+      "policy": "translate",
+      "note": "The reading overlay panel; whimsical loading lines keep a PLAYFUL tone, never mechanical (design §1, §7.1). Kept ≤ en length +20% for the ~560px panel.",
+      "de": "Panel / Lesefenster",
+      "hu": "panel / olvasópanel",
+      "uk": "панель / панель читання",
+      "zh-CN": "面板 / 朗读面板",
+      "pt-BR": "painel / painel de leitura"
+    },
+    "toast": {
+      "policy": "translate-by-meaning",
+      "note": "Transient notification. Never render the word 'toast' literally; phrase as a status/notification message in each language.",
+      "de": "(als Meldung formulieren)",
+      "hu": "(értesítésként megfogalmazva)",
+      "uk": "(як сповіщення)",
+      "zh-CN": "(表述为通知)",
+      "pt-BR": "(formular como notificação)"
+    },
+    "karaoke highlight": {
+      "policy": "translate",
+      "note": "'karaoke' stays as the internationally recognised loanword (karaokê/караоке/卡拉OK); 'highlight' translates.",
+      "de": "Karaoke-Hervorhebung",
+      "hu": "karaoke-kiemelés",
+      "uk": "караоке-підсвічування",
+      "zh-CN": "卡拉OK高亮",
+      "pt-BR": "destaque de karaokê"
+    }
+  },
+
+  "unit_symbols_kept": {
+    "ms": "Millisecond symbol — kept verbatim in every language.",
+    "px": "Pixel symbol — kept verbatim in every language.",
+    "KB": "Kilobyte symbol — kept Latin except uk which uses the Cyrillic КБ; MB likewise МБ."
+  }
+}

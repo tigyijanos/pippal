@@ -1,5 +1,4 @@
 """JS <-> Python bridge for the web UI.
-
 Every method here maps onto the EXISTING backend; none of them change
 backend behaviour. The same object is exposed two ways:
 
@@ -27,6 +26,7 @@ from ..context_menu import (
     install_context_menu,
     uninstall_context_menu,
 )
+from ..i18n import t as _t
 from ..onboarding import (
     activation_sample_text,
     build_activation_readiness,
@@ -37,10 +37,12 @@ from ..onboarding import (
 from ..paths import VOICES_DIR
 from ..voices import installed_voices, locale_name, voice_filename
 from .bridge_diag_settings import DiagSettingsBridgeMixin
+from .bridge_piper_speakers import PiperSpeakersBridgeMixin
+from .i18n_view import language_config_view
 from .overlay_state import WebOverlay
 
 
-class PipPalBridge(DiagSettingsBridgeMixin):
+class PipPalBridge(PiperSpeakersBridgeMixin, DiagSettingsBridgeMixin):
     """Backend facade the web frontend talks to.
 
     ``engine`` is the real :class:`pippal.engine.TTSEngine`. ``overlay``
@@ -80,7 +82,8 @@ class PipPalBridge(DiagSettingsBridgeMixin):
     # ------------------------------------------------------------------
 
     def get_config(self) -> dict[str, Any]:
-        return dict(self.config)
+        # Augment with the resolved UI language + picker options (i18n §5.3).
+        return language_config_view(self.config)
 
     def get_defaults(self) -> dict[str, Any]:
         return _layered_defaults()
@@ -97,30 +100,30 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         return {
             "version": __version__,
             "links": [
-                {"key": "website", "text": "Website", "url": "https://pippal.bugfactory.hu"},
+                {"key": "website", "text": _t("about.link.website"), "url": "https://pippal.bugfactory.hu"},
                 {
                     "key": "github",
-                    "text": "GitHub",
+                    "text": _t("about.link.github"),
                     "url": "https://github.com/bug-factory-kft/pippal",
                 },
                 {
                     "key": "licence",
-                    "text": "Licence (MIT)",
+                    "text": _t("about.link.licence"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/LICENSE.md",
                 },
                 {
                     "key": "privacy",
-                    "text": "Privacy",
+                    "text": _t("about.link.privacy"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/docs/PRIVACY.md",
                 },
                 {
                     "key": "terms",
-                    "text": "Terms",
+                    "text": _t("about.link.terms"),
                     "url": "https://github.com/bug-factory-kft/pippal/blob/main/docs/TERMS.md",
                 },
                 {
                     "key": "reddit",
-                    "text": "Community (Reddit)",
+                    "text": _t("about.link.reddit"),
                     "url": "https://www.reddit.com/r/PipPalApp/",
                 },
             ],
@@ -160,6 +163,20 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         self.config.update(candidate)
 
         result: dict[str, Any] = {"ok": True, "config": dict(self.config)}
+
+        # Re-activate the resolved UI language so on-demand Python surfaces
+        # (toasts, native titles) render in the new language immediately, and
+        # so any web window opened/reloaded next boots in it (T-107; design
+        # §5.5 — the tray menu, built once at startup, stays restart-required).
+        # ``language_resolved`` is echoed back so the frontend knows the
+        # concrete tag a reload will boot in.
+        try:
+            from ..i18n import get_language, set_language
+
+            set_language(candidate.get("language", ""))
+            result["language_resolved"] = get_language()
+        except Exception:
+            pass
 
         hotkeys_changed = any(prev_hotkeys.get(k, "") != candidate.get(k, "") for k in hotkey_keys)
         if hotkeys_changed and self._on_hotkey_change is not None:
@@ -275,7 +292,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
 
         def _download_one(url: str, dest: Any, base_pct: float, span: float, dlabel: str) -> None:
             url = _encode_download_url(url)
-            set_progress(status=f"Downloading {dlabel}…")
+            set_progress(status=_t("voice.status.downloading", {"label": dlabel}))
             with _urlreq.urlopen(url, timeout=DOWNLOAD_TIMEOUT_S) as resp, \
                     open(str(dest), "wb") as f:
                 total = int(resp.headers.get("Content-Length") or 0)
@@ -314,7 +331,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         self,
         voice_getter: Callable[[], dict[str, Any]],
         *,
-        start_msg: str = "Starting…",
+        start_msg: str | None = None,
     ) -> dict[str, Any]:
         """Internal: start a voice download on a background thread; return task_id.
 
@@ -323,6 +340,8 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         """
         import uuid
 
+        if start_msg is None:
+            start_msg = _t("voice.status.starting")
         task_id = uuid.uuid4().hex
         with self._voice_task_lock:
             self._voice_tasks[task_id] = {
@@ -357,7 +376,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
                     self.engine.reset_backend()
                 except Exception:
                     pass
-                _set(pct=100.0, status="✓ Done.")
+                _set(pct=100.0, status=_t("voice.status.done"))
                 with self._voice_task_lock:
                     t = self._voice_tasks.get(task_id, {})
                     t["installed"] = filename
@@ -369,7 +388,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
                     t = self._voice_tasks.get(task_id, {})
                     if t is not None:
                         t["error"] = str(exc)
-                        t["status"] = "Cancelled." if cancelled else f"Failed: {str(exc)[:200]}"
+                        t["status"] = _t("voice.status.cancelled") if cancelled else _t("voice.status.failed", {"error": str(exc)[:200]})
                         t["cancelled"] = cancelled
                         t["done"] = True
                         t["running"] = False
@@ -398,7 +417,7 @@ class PipPalBridge(DiagSettingsBridgeMixin):
         a task_id.
         """
         return self._start_voice_install_async(
-            default_piper_voice, start_msg="Downloading default voice…"
+            default_piper_voice, start_msg=_t("voice.status.downloading_default")
         )
 
     def voice_install_status(self, task_id: str) -> dict[str, Any]:
@@ -555,15 +574,11 @@ class PipPalBridge(DiagSettingsBridgeMixin):
 
         path = resolve_notices_path()
         if path is None:
-            return (
-                "Open-source notices were not found.\n\n"
-                "Please reinstall PipPal to restore the licences file, or "
-                "open docs/THIRD_PARTY.md from the source checkout."
-            )
+            return _t("notices.not_found")
         try:
             return path.read_text(encoding="utf-8")
         except Exception as exc:  # pragma: no cover - defensive
-            return f"Could not read {path}\n\n{exc}"
+            return _t("notices.read_error", {"path": str(path), "error": str(exc)})
 
     # ------------------------------------------------------------------
     # Window control (host callbacks)

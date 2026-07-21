@@ -34,20 +34,24 @@ def _register() -> None:
     plugins.register_voices(KNOWN_VOICES)
 
     # ----- Hotkey actions (selection-driven) -----
+    # Labels are i18n catalog KEYS; the web Settings UI resolves them
+    # through t() (settings.js) and falls back to the raw string for
+    # third-party plugins that register a plain-English label. The EN
+    # catalog carries the original English values verbatim.
     plugins.register_hotkey_action(
-        "speak", "hotkey_speak", "Read selection",
+        "speak", "hotkey_speak", "settings.hotkeys.action.speak",
         "windows+shift+r",
     )
     plugins.register_hotkey_action(
-        "queue", "hotkey_queue", "Queue selection",
+        "queue", "hotkey_queue", "settings.hotkeys.action.queue",
         "windows+shift+q",
     )
     plugins.register_hotkey_action(
-        "pause", "hotkey_pause", "Pause / Resume",
+        "pause", "hotkey_pause", "settings.hotkeys.action.pause",
         "windows+shift+p",
     )
     plugins.register_hotkey_action(
-        "stop", "hotkey_stop", "Stop",
+        "stop", "hotkey_stop", "settings.hotkeys.action.stop",
         "windows+shift+b",
     )
 
