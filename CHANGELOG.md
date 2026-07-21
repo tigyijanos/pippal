@@ -1,6 +1,8 @@
 # PipPal Changelog
 
-## 0.3.1 - Unreleased
+## 0.3.1 - 2026-07-21
+
+Release date: 2026-07-21
 
 - Upgrade compatibility: keeps the complete Ryan voice selected for users
   upgrading from 0.3.0 when the new default voice is not installed. Explicit
@@ -10,6 +12,8 @@
   with persisted startup language and plural handling in Python and JavaScript.
 - Voice setup: installs the default voice for the selected UI language and
   localizes Voice Manager language and quality labels.
+- LibriTTS: exposes the model's multi-speaker catalog so compatible clients
+  can offer hundreds of English speaker choices from one installed voice.
 - Reading UI: handles CJK karaoke segmentation and removes remaining hard-coded
   overlay and hotkey labels from localized surfaces.
 - Voice licensing: uses public-domain LJSpeech as the English default for new
