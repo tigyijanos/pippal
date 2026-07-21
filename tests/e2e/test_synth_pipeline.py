@@ -18,6 +18,16 @@ from pathlib import Path
 import pytest
 
 from pippal.engines.piper import PiperBackend
+from tests._synth_asr_oracle import (
+    ANCHORS,
+    MAX_WORD_ERROR_RATE,
+    MIN_ORDERED_ANCHORS,
+    SYNTHESIS_PROMPT,
+    normalize_words,
+    ordered_anchor_count,
+    passes_asr_oracle,
+    word_error_rate,
+)
 
 
 def _wav_duration_seconds(p: Path) -> float:
@@ -30,6 +40,7 @@ def _wav_duration_seconds(p: Path) -> float:
 def _wav_rms(p: Path) -> float:
     """Crude amplitude check — non-silent audio has measurable RMS."""
     import audioop
+
     with wave.open(str(p), "rb") as w:
         sample_width = w.getsampwidth()
         frames = w.readframes(w.getnframes())
@@ -42,19 +53,21 @@ class TestSynthesisPipeline:
     Piper writes a WAV, the WAV looks right."""
 
     def test_short_phrase_produces_valid_wav(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         backend = PiperBackend(piper_config)
         out = tmp_path / "hello.wav"
         ok = backend.synthesize("Hello world from PipPal.", out)
         assert ok, "PiperBackend.synthesize returned False"
         assert out.exists(), "WAV file was not written"
-        assert out.stat().st_size > 1024, (
-            f"WAV file suspiciously small: {out.stat().st_size} bytes"
-        )
+        assert out.stat().st_size > 1024, f"WAV file suspiciously small: {out.stat().st_size} bytes"
 
     def test_wav_has_plausible_duration(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         backend = PiperBackend(piper_config)
         out = tmp_path / "duration.wav"
@@ -65,7 +78,9 @@ class TestSynthesisPipeline:
         assert 0.8 < d < 5.0, f"unexpected synth duration: {d:.2f} s"
 
     def test_wav_is_not_silent(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         backend = PiperBackend(piper_config)
         out = tmp_path / "amp.wav"
@@ -77,7 +92,9 @@ class TestSynthesisPipeline:
         assert rms > 50, f"WAV looks silent (RMS {rms})"
 
     def test_multi_chunk_synth_and_concat(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         """An article-shaped input gets sentence-split into multiple
         chunks. Each chunk is synthesised through the real piper.exe;
@@ -123,12 +140,13 @@ class TestSynthesisPipeline:
         joined = wav_duration(merged)
         assert total > 0
         assert abs(joined - total) / total < 0.05, (
-            f"merged duration drifted from sum of chunks: "
-            f"merged={joined:.2f}s sum={total:.2f}s"
+            f"merged duration drifted from sum of chunks: merged={joined:.2f}s sum={total:.2f}s"
         )
 
     def test_length_scale_changes_duration(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         """``length_scale`` is the user-facing speed knob inverse —
         2.0 means *slower*, 0.6 *faster*. The synth duration should
@@ -144,8 +162,7 @@ class TestSynthesisPipeline:
         d_slow = _wav_duration_seconds(slow)
         d_fast = _wav_duration_seconds(fast)
         assert d_slow > d_fast, (
-            f"length_scale=1.5 should be slower than 0.7, got "
-            f"slow={d_slow:.2f}s fast={d_fast:.2f}s"
+            f"length_scale=1.5 should be slower than 0.7, got slow={d_slow:.2f}s fast={d_fast:.2f}s"
         )
 
 
@@ -159,33 +176,48 @@ class TestSynthesisASRRoundTrip:
     Marked separately so a fast headless CI tier can skip it."""
 
     def test_synth_decodes_to_known_phrase(
-        self, piper_config: dict, tmp_path: Path,
+        self,
+        piper_config: dict,
+        tmp_path: Path,
     ) -> None:
         whisper = pytest.importorskip("faster_whisper")
 
-        text = "Hello world from PipPal."
         out = tmp_path / "asr.wav"
-        PiperBackend(piper_config).synthesize(text, out)
+        synthesized = PiperBackend(piper_config).synthesize(SYNTHESIS_PROMPT, out)
+
+        assert synthesized, "Piper synthesis failed"
+        assert out.exists(), "Piper reported success without creating the WAV"
+        assert out.stat().st_size > 1_024, "Synthesized WAV is unexpectedly small"
+
+        duration = _wav_duration_seconds(out)
+        rms = _wav_rms(out)
+        assert 2 < duration < 15, f"Unexpected synthesized duration: {duration:.3f}s"
+        assert rms > 50, f"Synthesized WAV is effectively silent: RMS={rms:.1f}"
 
         model = whisper.WhisperModel(
-            "tiny.en", device="cpu", compute_type="int8",
+            "tiny.en",
+            device="cpu",
+            compute_type="int8",
         )
-        segments, _info = model.transcribe(str(out), language="en")
-        decoded = " ".join(seg.text for seg in segments).lower().strip()
-        # We don't insist on word-perfect; whisper-tiny mishears, and
-        # piper's prosody can swallow short words. Insist on the two
-        # content nouns.
-        assert "hello" in decoded, (
-            f"ASR didn't recover 'hello' from synth output. "
-            f"Got: {decoded!r}"
+        segments, _info = model.transcribe(
+            str(out),
+            language="en",
+            beam_size=5,
+            temperature=0.0,
+            condition_on_previous_text=False,
+            without_timestamps=True,
         )
-        # whisper-tiny mishears "PipPal" — known phonetic variants include
-        # "pippal", "pippa", "hippal", "pippel". Strip whitespace and accept variants.
-        decoded_squashed = decoded.replace(" ", "")
-        assert any(
-            variant in decoded_squashed
-            for variant in ("pippal", "pippa", "hippal", "pippel")
-        ), (
-            f"ASR didn't recover 'pippal' from synth output. "
-            f"Got: {decoded!r}"
+        decoded = " ".join(segment.text for segment in segments).strip()
+        normalized_tokens = normalize_words(decoded)
+        measured_wer = word_error_rate(decoded)
+        recovered_anchors = ordered_anchor_count(decoded)
+
+        assert passes_asr_oracle(decoded), (
+            f"Synthesis ASR oracle failed: decoded={decoded!r}; "
+            f"normalized_tokens={list(normalized_tokens)!r}; "
+            f"word_error_rate={measured_wer:.3f}; "
+            f"maximum_word_error_rate={MAX_WORD_ERROR_RATE}; "
+            f"ordered_anchor_count={recovered_anchors}; "
+            f"minimum_ordered_anchors={MIN_ORDERED_ANCHORS}; "
+            f"anchors={list(ANCHORS)!r}"
         )
