@@ -2,7 +2,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 
 
 def test_release_version_surfaces_are_synchronized() -> None:
@@ -15,17 +15,16 @@ def test_release_version_surfaces_are_synchronized() -> None:
     assert pyproject["project"]["version"] == VERSION
     assert f'__version__ = "{VERSION}"' in package_init
     assert f'#define MyAppVersion   "{VERSION}"' in installer
+    assert "AppId={{B7E3F2A1-4C9D-4E6B-8F0A-1D2E3C4B5A67}" in installer
     assert f"Core v{VERSION}" in readme
-    assert changelog.index(f"## {VERSION}") < changelog.index("## 0.3.1")
+    assert changelog.index(f"## {VERSION}") < changelog.index("## 0.3.2")
 
 
 def test_release_workflow_targets_current_installer_and_tag() -> None:
-    workflow = (ROOT / ".github/workflows/release-installer.yml").read_text(
-        encoding="utf-8"
-    )
+    workflow = (ROOT / ".github/workflows/release-installer.yml").read_text(encoding="utf-8")
 
-    assert "PipPal-Setup-0.3.2.exe" in workflow
-    assert "name: PipPal-Setup-0.3.2" in workflow
-    assert '$tag       = "v0.3.2"' in workflow
-    assert "PipPal-Setup-0.3.1" not in workflow
-    assert "v0.3.1" not in workflow
+    assert "PipPal-Setup-0.3.3.exe" in workflow
+    assert "name: PipPal-Setup-0.3.3" in workflow
+    assert '$tag       = "v0.3.3"' in workflow
+    assert "PipPal-Setup-0.3.2" not in workflow
+    assert "v0.3.2" not in workflow

@@ -1,5 +1,15 @@
 # PipPal Changelog
 
+## 0.3.3 - 2026-07-31
+
+Release date: 2026-07-31
+
+- Windows bridge reliability and safety: bounded rejected request bodies are
+  drained so clients receive deterministic policy errors; ambiguous or
+  malformed HTTP framing is rejected; and a total request-body deadline stops
+  slow trickle requests. Valid same-origin browser and Origin-less native JSON
+  clients remain compatible.
+
 ## 0.3.2 - 2026-07-31
 
 Release date: 2026-07-31
