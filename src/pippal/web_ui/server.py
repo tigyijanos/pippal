@@ -23,16 +23,12 @@ import re
 import sys
 import threading
 import time
-from email.errors import (
-    FirstHeaderLineIsContinuationDefect,
-    InvalidHeaderDefect,
-    MissingHeaderBodySeparatorDefect,
-)
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
 from .bridge import PipPalBridge
+from .bridge_request_headers import HTTP_TOKEN, has_invalid_http_headers
 
 
 def _resolve_webui_dir() -> Path:
@@ -54,7 +50,6 @@ def _resolve_webui_dir() -> Path:
 
 WEBUI_DIR = _resolve_webui_dir()
 
-_TOKEN = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
 _MAX_BRIDGE_BODY_BYTES = 2 * 1024 * 1024
 _BRIDGE_BODY_READ_TIMEOUT_SECONDS = 1.0
 
@@ -69,8 +64,8 @@ def _is_json_content_type(value: str) -> bool:
     """Return whether *value* is a valid application/json media type."""
     quoted_value = r'"(?:[\t !#-\[\]-~\x80-\xff]|\\[\t -~\x80-\xff])*"'
     pattern = (
-        rf"(?P<type>{_TOKEN})/(?P<subtype>{_TOKEN})"
-        rf"(?:[ \t]*;[ \t]*{_TOKEN}=(?:{_TOKEN}|{quoted_value}))*"
+        rf"(?P<type>{HTTP_TOKEN})/(?P<subtype>{HTTP_TOKEN})"
+        rf"(?:[ \t]*;[ \t]*{HTTP_TOKEN}=(?:{HTTP_TOKEN}|{quoted_value}))*"
     )
     parsed = re.fullmatch(pattern, value.strip(" \t"))
     return (
@@ -124,22 +119,7 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         rejection_status = self._bridge_rejection_status()
-        structural_defect = any(
-            isinstance(
-                defect,
-                (
-                    FirstHeaderLineIsContinuationDefect,
-                    InvalidHeaderDefect,
-                    MissingHeaderBodySeparatorDefect,
-                ),
-            )
-            for defect in self.headers.defects
-        )
-        invalid_field = any(
-            re.fullmatch(_TOKEN, name) is None or "\r" in value or "\n" in value
-            for name, value in self.headers.raw_items()
-        )
-        if structural_defect or invalid_field:
+        if has_invalid_http_headers(self.headers):
             self.close_connection = True
             self.send_error(400)
             return

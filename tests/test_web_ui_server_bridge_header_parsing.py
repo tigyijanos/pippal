@@ -10,6 +10,34 @@ from tests.test_web_ui_server_bridge_drain import tracked_server as tracked_serv
 from tests.test_web_ui_server_bridge_framing import _request, _valid_headers
 
 
+def _raw_bridge_request(
+    port: int,
+    body: bytes,
+    *,
+    first_header: bytes = b"",
+    extra_header: bytes = b"",
+) -> bytes:
+    request = (
+        b"POST /bridge HTTP/1.1\r\n"
+        + first_header
+        + (
+            f"Host: 127.0.0.1:{port}\r\n"
+            "Content-Type: application/json\r\n"
+            f"Content-Length: {len(body)}\r\n"
+        ).encode()
+        + extra_header
+        + b"Connection: close\r\n\r\n"
+        + body
+    )
+    client = socket.create_connection(("127.0.0.1", port), timeout=2)
+    client.settimeout(3)
+    try:
+        client.sendall(request)
+        return client.recv(4096)
+    finally:
+        client.close()
+
+
 @pytest.mark.parametrize("raw_header", [b"Bad@Name: value\r\n", b"X-Test: one\r\n two\r\n"])
 def test_bridge_rejects_invalid_http_header_syntax_without_reading(
     tracked_server,
@@ -17,30 +45,57 @@ def test_bridge_rejects_invalid_http_header_syntax_without_reading(
 ) -> None:
     bridge, server, port = tracked_server
     body = json.dumps({"method": "mutate", "args": ["value"]}).encode()
-    request = (
-        (
-            f"POST /bridge HTTP/1.1\r\n"
-            f"Host: 127.0.0.1:{port}\r\n"
-            "Content-Type: application/json\r\n"
-            f"Content-Length: {len(body)}\r\n"
-        ).encode()
-        + raw_header
-        + b"Connection: close\r\n\r\n"
-        + body
-    )
-
-    client = socket.create_connection(("127.0.0.1", port), timeout=2)
-    client.settimeout(3)
-    try:
-        client.sendall(request)
-        response = client.recv(4096)
-    finally:
-        client.close()
+    response = _raw_bridge_request(port, body, extra_header=raw_header)
 
     _wait_for_request(server)
     assert response.startswith(b"HTTP/1.0 400 ")
     assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
     assert bridge.calls == []
+
+
+@pytest.mark.parametrize("position", ["first", "middle"])
+def test_bridge_rejects_envelope_header_lines_without_reading(
+    tracked_server,
+    position: str,
+) -> None:
+    bridge, server, port = tracked_server
+    body = json.dumps({"method": "mutate", "args": ["value"]}).encode()
+    envelope = b"From attacker\r\n"
+    kwargs = {"first_header": envelope} if position == "first" else {"extra_header": envelope}
+
+    response = _raw_bridge_request(port, body, **kwargs)
+
+    _wait_for_request(server)
+    assert response.startswith(b"HTTP/1.0 400 ")
+    assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
+    assert bridge.calls == []
+
+
+@pytest.mark.parametrize("control", [b"\x00", b"\x08", b"\x0b", b"\x7f"])
+def test_bridge_rejects_forbidden_field_value_controls_without_reading(
+    tracked_server,
+    control: bytes,
+) -> None:
+    bridge, server, port = tracked_server
+    body = json.dumps({"method": "mutate", "args": ["value"]}).encode()
+    response = _raw_bridge_request(port, body, extra_header=b"X-Test: a" + control + b"b\r\n")
+
+    _wait_for_request(server)
+    assert response.startswith(b"HTTP/1.0 400 ")
+    assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
+    assert bridge.calls == []
+
+
+@pytest.mark.parametrize("allowed", [b"\t", b"\x80"])
+def test_bridge_allows_htab_and_obs_text_in_field_values(tracked_server, allowed: bytes) -> None:
+    bridge, server, port = tracked_server
+    body = json.dumps({"method": "mutate", "args": ["value"]}).encode()
+    response = _raw_bridge_request(port, body, extra_header=b"X-Test: a" + allowed + b"b\r\n")
+
+    _wait_for_request(server)
+    assert response.startswith(b"HTTP/1.0 200 ")
+    assert server.read_observations[-1] == (len(body), [len(body)])  # type: ignore[attr-defined]
+    assert bridge.calls == [["value"]]
 
 
 @pytest.mark.parametrize(
