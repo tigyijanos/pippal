@@ -49,6 +49,8 @@ def _resolve_webui_dir() -> Path:
 WEBUI_DIR = _resolve_webui_dir()
 
 _TOKEN = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+_MAX_BRIDGE_BODY_BYTES = 2 * 1024 * 1024
+_BRIDGE_BODY_READ_TIMEOUT_SECONDS = 1.0
 
 
 def _public_methods(bridge: PipPalBridge) -> set[str]:
@@ -116,6 +118,10 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         rejection_status = self._bridge_rejection_status()
+        if self.headers.get_all("Transfer-Encoding", []):
+            self.close_connection = True
+            self.send_error(400)
+            return
         content_lengths = self.headers.get_all("Content-Length", [])
         if len(content_lengths) != 1:
             self.close_connection = True
@@ -126,25 +132,31 @@ class _Handler(SimpleHTTPRequestHandler):
             self.close_connection = True
             self.send_error(400)
             return
-        try:
-            length = int(raw_length)
-        except ValueError:
-            self.close_connection = True
-            self.send_error(400)
-            return
-        if length > 2 * 1024 * 1024:
+        normalized_length = raw_length.lstrip("0") or "0"
+        max_length = str(_MAX_BRIDGE_BODY_BYTES)
+        if len(normalized_length) > len(max_length) or (
+            len(normalized_length) == len(max_length) and normalized_length > max_length
+        ):
             self.close_connection = True
             self.send_error(413, "payload too large")
             return
+        length = int(normalized_length)
         # A response followed by a close while POST bytes are still pending can
         # surface as a Windows socket reset. Read the validated, bounded body
         # exactly once before emitting any request-guard rejection.
+        previous_timeout = self.connection.gettimeout()
+        read_failed = False
         try:
-            body = self.rfile.read(length)
-        except (OSError, ValueError):
-            self.send_error(400, "bad JSON")
-            return
-        if len(body) != length:
+            self.connection.settimeout(_BRIDGE_BODY_READ_TIMEOUT_SECONDS)
+            try:
+                body = self.rfile.read(length)
+            except (OSError, ValueError):
+                body = b""
+                read_failed = True
+        finally:
+            self.connection.settimeout(previous_timeout)
+        if read_failed or len(body) != length:
+            self.close_connection = True
             self.send_error(400, "bad JSON")
             return
         if rejection_status is not None:
@@ -153,7 +165,7 @@ class _Handler(SimpleHTTPRequestHandler):
             return
         try:
             data = json.loads(body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
             self.send_error(400, "bad JSON")
             return
         method = str(data.get("method", ""))
