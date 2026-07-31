@@ -22,6 +22,7 @@ import json
 import re
 import sys
 import threading
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -118,6 +119,14 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         rejection_status = self._bridge_rejection_status()
+        # The email-based parser reports MIME-only defects for a bare
+        # multipart Content-Type; that request still belongs to the exact 415
+        # media-type path. Structural defects on an otherwise valid request,
+        # or ignored header lines retained as payload, are ambiguous framing.
+        if self.headers.get_payload() or (self.headers.defects and rejection_status != 415):
+            self.close_connection = True
+            self.send_error(400)
+            return
         if self.headers.get_all("Transfer-Encoding", []):
             self.close_connection = True
             self.send_error(400)
@@ -143,16 +152,27 @@ class _Handler(SimpleHTTPRequestHandler):
         length = int(normalized_length)
         # A response followed by a close while POST bytes are still pending can
         # surface as a Windows socket reset. Read the validated, bounded body
-        # exactly once before emitting any request-guard rejection.
+        # without re-reading any bytes before emitting a guard rejection.
         previous_timeout = self.connection.gettimeout()
+        deadline = time.monotonic() + _BRIDGE_BODY_READ_TIMEOUT_SECONDS
+        body = bytearray()
         read_failed = False
         try:
-            self.connection.settimeout(_BRIDGE_BODY_READ_TIMEOUT_SECONDS)
-            try:
-                body = self.rfile.read(length)
-            except (OSError, ValueError):
-                body = b""
-                read_failed = True
+            while len(body) < length:
+                remaining_timeout = deadline - time.monotonic()
+                if remaining_timeout <= 0:
+                    read_failed = True
+                    break
+                self.connection.settimeout(remaining_timeout)
+                try:
+                    chunk = self.rfile.read1(min(length - len(body), 64 * 1024))
+                except (OSError, ValueError):
+                    read_failed = True
+                    break
+                if not chunk:
+                    read_failed = True
+                    break
+                body.extend(chunk)
         finally:
             self.connection.settimeout(previous_timeout)
         if read_failed or len(body) != length:
@@ -165,7 +185,7 @@ class _Handler(SimpleHTTPRequestHandler):
             return
         try:
             data = json.loads(body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError):
             self.send_error(400, "bad JSON")
             return
         method = str(data.get("method", ""))

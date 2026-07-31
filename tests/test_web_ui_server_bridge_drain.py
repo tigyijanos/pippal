@@ -26,11 +26,20 @@ class _ReadTracker:
     def __init__(self, stream: Any) -> None:
         self._stream = stream
         self.calls: list[int] = []
+        self.methods: list[str] = []
         self.bytes_read = 0
 
     def read(self, size: int = -1) -> bytes:
         data = self._stream.read(size)
-        self.calls.append(size)
+        self.calls.append(len(data))
+        self.methods.append("read")
+        self.bytes_read += len(data)
+        return data
+
+    def read1(self, size: int = -1) -> bytes:
+        data = self._stream.read1(size)
+        self.calls.append(len(data))
+        self.methods.append("read1")
         self.bytes_read += len(data)
         return data
 
@@ -46,6 +55,7 @@ class _TrackingHandler(_Handler):
             super().do_POST()
         finally:
             self.server.read_observations.append((tracker.bytes_read, tracker.calls))  # type: ignore[attr-defined]
+            self.server.read_methods.append(tracker.methods)  # type: ignore[attr-defined]
 
     def send_error(
         self,
@@ -71,6 +81,7 @@ def tracked_server():
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     server.error_observations = []  # type: ignore[attr-defined]
     server.read_observations = []  # type: ignore[attr-defined]
+    server.read_methods = []  # type: ignore[attr-defined]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -169,4 +180,5 @@ def test_accepted_bridge_body_is_read_once_and_dispatched_from_buffer(tracked_se
     ]
     assert _request(port, headers, body) == 200
     assert server.read_observations[-1] == (len(body), [len(body)])  # type: ignore[attr-defined]
+    assert server.read_methods[-1] == ["read1"]  # type: ignore[attr-defined]
     assert bridge.calls == [["value"]]
