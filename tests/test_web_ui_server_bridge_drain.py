@@ -56,6 +56,7 @@ class _TrackingHandler(_Handler):
         finally:
             self.server.read_observations.append((tracker.bytes_read, tracker.calls))  # type: ignore[attr-defined]
             self.server.read_methods.append(tracker.methods)  # type: ignore[attr-defined]
+            self.server.request_done.set()  # type: ignore[attr-defined]
 
     def send_error(
         self,
@@ -82,6 +83,7 @@ def tracked_server():
     server.error_observations = []  # type: ignore[attr-defined]
     server.read_observations = []  # type: ignore[attr-defined]
     server.read_methods = []  # type: ignore[attr-defined]
+    server.request_done = threading.Event()  # type: ignore[attr-defined]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -90,6 +92,10 @@ def tracked_server():
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def _wait_for_request(server: ThreadingHTTPServer) -> None:
+    assert server.request_done.wait(timeout=2), "handler observations were not finalized"  # type: ignore[attr-defined]
 
 
 def _request(
@@ -134,6 +140,7 @@ def test_rejected_bridge_body_is_consumed_before_error_emission(
         headers[1] = ("Content-Type", "text/plain")
 
     assert _request(port, headers, body) == expected_status
+    _wait_for_request(server)
     assert server.error_observations[-1] == (expected_status, len(body), [len(body)])  # type: ignore[attr-defined]
     assert bridge.calls == []
 
@@ -154,6 +161,7 @@ def test_bridge_rejects_invalid_content_length_without_reading(
     bridge, server, port = tracked_server
     headers = [("Host", f"127.0.0.1:{port}"), ("Content-Type", "application/json"), *length_headers]
     assert _request(port, headers, None) == 400
+    _wait_for_request(server)
     assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
     assert bridge.calls == []
 
@@ -166,6 +174,7 @@ def test_oversized_header_only_bridge_request_returns_413_without_reading(tracke
         ("Content-Length", str(MAX_BODY_BYTES + 1)),
     ]
     assert _request(port, headers, None) == 413
+    _wait_for_request(server)
     assert server.error_observations[-1] == (413, 0, [])  # type: ignore[attr-defined]
     assert bridge.calls == []
 
@@ -179,6 +188,7 @@ def test_accepted_bridge_body_is_read_once_and_dispatched_from_buffer(tracked_se
         ("Content-Length", str(len(body))),
     ]
     assert _request(port, headers, body) == 200
+    _wait_for_request(server)
     assert server.read_observations[-1] == (len(body), [len(body)])  # type: ignore[attr-defined]
     assert server.read_methods[-1] == ["read1"]  # type: ignore[attr-defined]
     assert bridge.calls == [["value"]]

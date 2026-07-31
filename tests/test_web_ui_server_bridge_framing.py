@@ -8,7 +8,7 @@ from http.client import HTTPConnection
 
 import pytest
 
-from tests.test_web_ui_server_bridge_drain import MAX_BODY_BYTES
+from tests.test_web_ui_server_bridge_drain import MAX_BODY_BYTES, _wait_for_request
 from tests.test_web_ui_server_bridge_drain import tracked_server as tracked_server
 
 
@@ -50,6 +50,7 @@ def test_bridge_rejects_any_transfer_encoding_without_read_or_dispatch(
         body,
     )
 
+    _wait_for_request(server)
     assert status == 400
     assert headers["Connection"].casefold() == "close"
     assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
@@ -82,6 +83,7 @@ def test_partial_hostile_bridge_body_has_bounded_server_read(tracked_server) -> 
         elapsed = time.monotonic() - started
         client.close()
 
+    _wait_for_request(server)
     assert elapsed < 3
     assert response.startswith(b"HTTP/1.0 400 ")
     assert server.error_observations[-1][0] == 400  # type: ignore[attr-defined]
@@ -127,6 +129,7 @@ def test_slow_trickle_bridge_body_has_total_wall_clock_deadline(tracked_server) 
         client.close()
         sender.join(timeout=1)
 
+    _wait_for_request(server)
     assert elapsed < 2
     assert response.startswith(b"HTTP/1.0 400 ")
     assert server.read_methods[-1]  # type: ignore[attr-defined]
@@ -163,6 +166,7 @@ def test_bridge_rejects_malformed_transfer_encoding_header_name(
     finally:
         client.close()
 
+    _wait_for_request(server)
     assert response.startswith(b"HTTP/1.0 400 ")
     assert server.error_observations[-1] == (400, 0, [])  # type: ignore[attr-defined]
     assert bridge.calls == []
@@ -173,6 +177,7 @@ def test_very_large_decimal_content_length_is_413_without_reading(tracked_server
     huge_length = "1" + ("0" * 4_999)
     status, _ = _request(port, _valid_headers(port, huge_length), None)
 
+    _wait_for_request(server)
     assert status == 413
     assert server.error_observations[-1] == (413, 0, [])  # type: ignore[attr-defined]
     assert server.read_observations[-1] == (0, [])  # type: ignore[attr-defined]
@@ -185,6 +190,7 @@ def test_long_zero_padded_content_length_remains_valid(tracked_server) -> None:
     padded_length = ("0" * 5_000) + str(len(body))
     status, _ = _request(port, _valid_headers(port, padded_length), body)
 
+    _wait_for_request(server)
     assert status == 200
     assert server.read_observations[-1] == (len(body), [len(body)])  # type: ignore[attr-defined]
     assert bridge.calls == [["value"]]
@@ -197,6 +203,7 @@ def test_deeply_nested_json_returns_400_without_dispatch(tracked_server) -> None
 
     status, _ = _request(port, _valid_headers(port, str(len(body))), body)
 
+    _wait_for_request(server)
     assert status == 400
     status_code, bytes_read, read_sizes = server.error_observations[-1]  # type: ignore[attr-defined]
     assert (status_code, bytes_read, sum(read_sizes)) == (400, len(body), len(body))
@@ -209,6 +216,7 @@ def test_json_integer_over_digit_limit_returns_400_without_dispatch(tracked_serv
 
     status, _ = _request(port, _valid_headers(port, str(len(body))), body)
 
+    _wait_for_request(server)
     assert status == 400
     assert server.error_observations[-1] == (400, len(body), [len(body)])  # type: ignore[attr-defined]
     assert bridge.calls == []
