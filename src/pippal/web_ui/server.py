@@ -19,6 +19,7 @@ can't reach arbitrary attributes.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -47,13 +48,28 @@ def _resolve_webui_dir() -> Path:
 
 WEBUI_DIR = _resolve_webui_dir()
 
+_TOKEN = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+
 
 def _public_methods(bridge: PipPalBridge) -> set[str]:
     return {
-        name
-        for name in dir(bridge)
-        if not name.startswith("_") and callable(getattr(bridge, name))
+        name for name in dir(bridge) if not name.startswith("_") and callable(getattr(bridge, name))
     }
+
+
+def _is_json_content_type(value: str) -> bool:
+    """Return whether *value* is a valid application/json media type."""
+    quoted_value = r'"(?:[\t !#-\[\]-~\x80-\xff]|\\[\t -~\x80-\xff])*"'
+    pattern = (
+        rf"(?P<type>{_TOKEN})/(?P<subtype>{_TOKEN})"
+        rf"(?:[ \t]*;[ \t]*{_TOKEN}=(?:{_TOKEN}|{quoted_value}))*"
+    )
+    parsed = re.fullmatch(pattern, value.strip(" \t"))
+    return (
+        parsed is not None
+        and parsed["type"].casefold() == "application"
+        and parsed["subtype"].casefold() == "json"
+    )
 
 
 class _Handler(SimpleHTTPRequestHandler):
@@ -75,9 +91,35 @@ class _Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _accepts_bridge_request(self) -> bool:
+        port = self.server.server_address[1]
+        authority = f"127.0.0.1:{port}"
+
+        hosts = self.headers.get_all("Host", [])
+        if len(hosts) != 1 or hosts[0].strip(" \t") != authority:
+            self.send_error(400)
+            return False
+
+        origins = self.headers.get_all("Origin", [])
+        if len(origins) > 1 or (origins and origins[0].strip(" \t") != f"http://{authority}"):
+            self.send_error(403)
+            return False
+        fetch_sites = self.headers.get_all("Sec-Fetch-Site", [])
+        if any(value.strip().casefold() == "cross-site" for value in fetch_sites):
+            self.send_error(403)
+            return False
+
+        content_types = self.headers.get_all("Content-Type", [])
+        if len(content_types) != 1 or not _is_json_content_type(content_types[0]):
+            self.send_error(415)
+            return False
+        return True
+
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/bridge":
             self.send_error(404)
+            return
+        if not self._accepts_bridge_request():
             return
         length = int(self.headers.get("Content-Length", 0) or 0)
         if length > 2 * 1024 * 1024:
