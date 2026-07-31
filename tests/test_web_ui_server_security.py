@@ -85,7 +85,7 @@ def test_bridge_rejects_noncanonical_host_without_dispatch(bridge_server, host):
     _assert_rejected(bridge_server, 400, [("Host", host.format(port=port)), ("Content-Type", JSON)])
 
 
-@pytest.mark.parametrize("host", ["127.0.0.1:{port}, evil.test", "user@127.0.0.1:{port}"])
+@pytest.mark.parametrize("host", ["127.0.0.1:{port}, evil.test", "user@127.0.0.1:{port}", "127.0.0.1 :{port}"])
 def test_bridge_rejects_malformed_host_without_dispatch(bridge_server, host):
     _, port = bridge_server
     _assert_rejected(bridge_server, 400, [("Host", host.format(port=port)), ("Content-Type", JSON)])
@@ -102,7 +102,7 @@ def test_bridge_rejects_cross_origin_without_dispatch(bridge_server, origin):
     _assert_rejected(bridge_server, 403, [*_valid_headers(port), ("Origin", origin.format(port=port))])
 
 
-@pytest.mark.parametrize("origin", ["http://127.0.0.1:{port}/", "http://127.0.0.1:{port}, http://evil.test"])
+@pytest.mark.parametrize("origin", ["http://127.0.0.1:{port}/", "http://127.0.0.1:{port}, http://evil.test", "http://127.0.0.1 :{port}"])
 def test_bridge_rejects_malformed_origin_without_dispatch(bridge_server, origin):
     _, port = bridge_server
     _assert_rejected(bridge_server, 403, [*_valid_headers(port), ("Origin", origin.format(port=port))])
@@ -136,9 +136,10 @@ def test_bridge_rejects_non_json_content_types_without_dispatch(bridge_server, m
     _assert_rejected(bridge_server, 415, [("Host", _authority(port)), ("Content-Type", media_type)])
 
 
-def test_bridge_rejects_malformed_content_type_without_dispatch(bridge_server):
+@pytest.mark.parametrize("media_type", ["application/json, text/plain", "application /json", "application/json; charset", "application/json; charset =utf-8", 'application/json; charset="unterminated'])
+def test_bridge_rejects_malformed_content_type_without_dispatch(bridge_server, media_type):
     _, port = bridge_server
-    _assert_rejected(bridge_server, 415, [("Host", _authority(port)), ("Content-Type", "application/json, text/plain")])
+    _assert_rejected(bridge_server, 415, [("Host", _authority(port)), ("Content-Type", media_type)])
 
 
 @pytest.mark.parametrize("values", [[JSON, "text/plain"], ["text/plain", JSON], [JSON, JSON]])
@@ -170,9 +171,18 @@ def test_bridge_accepts_no_origin_json_native_helper_and_dispatches(bridge_serve
     assert (status, json.loads(body), bridge.calls) == (200, {"result": "mutated"}, [("mutate", ["value"])])
 
 
-def test_bridge_accepts_json_charset_parameter_and_dispatches(bridge_server):
+@pytest.mark.parametrize("media_type", ["application/json; charset=utf-8", 'Application/JSON; charset="utf-8"', 'application/json; profile="https://example.test/a"'])
+def test_bridge_accepts_json_charset_parameter_and_dispatches(bridge_server, media_type):
     bridge, port = bridge_server
-    status, _, _ = _request(port, [("Host", _authority(port)), ("Content-Type", "application/json; charset=utf-8")])
+    status, _, _ = _request(port, [("Host", _authority(port)), ("Content-Type", media_type)])
+    assert (status, bridge.calls) == (200, [("mutate", ["value"])])
+
+
+@pytest.mark.parametrize("ows", [" ", "\t"])
+def test_bridge_accepts_host_and_origin_outer_ows(bridge_server, ows):
+    bridge, port = bridge_server
+    headers = [("Host", _authority(port) + ows), ("Origin", f"http://{_authority(port)}{ows}"), ("Content-Type", JSON)]
+    status, _, _ = _request(port, headers)
     assert (status, bridge.calls) == (200, [("mutate", ["value"])])
 
 

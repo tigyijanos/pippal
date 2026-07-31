@@ -19,10 +19,9 @@ can't reach arbitrary attributes.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
-from email.message import Message
-from email.policy import default
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -49,6 +48,8 @@ def _resolve_webui_dir() -> Path:
 
 WEBUI_DIR = _resolve_webui_dir()
 
+_TOKEN = r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+
 
 def _public_methods(bridge: PipPalBridge) -> set[str]:
     return {
@@ -58,14 +59,16 @@ def _public_methods(bridge: PipPalBridge) -> set[str]:
 
 def _is_json_content_type(value: str) -> bool:
     """Return whether *value* is a valid application/json media type."""
-    message = Message(policy=default)
-    message["Content-Type"] = value
-    parsed = message["Content-Type"]
+    quoted_value = r'"(?:[\t !#-\[\]-~\x80-\xff]|\\[\t -~\x80-\xff])*"'
+    pattern = (
+        rf"(?P<type>{_TOKEN})/(?P<subtype>{_TOKEN})"
+        rf"(?:[ \t]*;[ \t]*{_TOKEN}=(?:{_TOKEN}|{quoted_value}))*"
+    )
+    parsed = re.fullmatch(pattern, value.strip(" \t"))
     return (
-        not parsed.defects
-        and not value.rstrip().endswith(";")
-        and parsed.maintype.casefold() == "application"
-        and parsed.subtype.casefold() == "json"
+        parsed is not None
+        and parsed["type"].casefold() == "application"
+        and parsed["subtype"].casefold() == "json"
     )
 
 
@@ -93,12 +96,12 @@ class _Handler(SimpleHTTPRequestHandler):
         authority = f"127.0.0.1:{port}"
 
         hosts = self.headers.get_all("Host", [])
-        if len(hosts) != 1 or hosts[0] != authority:
+        if len(hosts) != 1 or hosts[0].strip(" \t") != authority:
             self.send_error(400)
             return False
 
         origins = self.headers.get_all("Origin", [])
-        if len(origins) > 1 or (origins and origins[0] != f"http://{authority}"):
+        if len(origins) > 1 or (origins and origins[0].strip(" \t") != f"http://{authority}"):
             self.send_error(403)
             return False
         fetch_sites = self.headers.get_all("Sec-Fetch-Site", [])
