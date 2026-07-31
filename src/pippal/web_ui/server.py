@@ -23,6 +23,11 @@ import re
 import sys
 import threading
 import time
+from email.errors import (
+    FirstHeaderLineIsContinuationDefect,
+    InvalidHeaderDefect,
+    MissingHeaderBodySeparatorDefect,
+)
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -119,11 +124,22 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         rejection_status = self._bridge_rejection_status()
-        # The email-based parser reports MIME-only defects for a bare
-        # multipart Content-Type; that request still belongs to the exact 415
-        # media-type path. Structural defects on an otherwise valid request,
-        # or ignored header lines retained as payload, are ambiguous framing.
-        if self.headers.get_payload() or (self.headers.defects and rejection_status != 415):
+        structural_defect = any(
+            isinstance(
+                defect,
+                (
+                    FirstHeaderLineIsContinuationDefect,
+                    InvalidHeaderDefect,
+                    MissingHeaderBodySeparatorDefect,
+                ),
+            )
+            for defect in self.headers.defects
+        )
+        invalid_field = any(
+            re.fullmatch(_TOKEN, name) is None or "\r" in value or "\n" in value
+            for name, value in self.headers.raw_items()
+        )
+        if structural_defect or invalid_field:
             self.close_connection = True
             self.send_error(400)
             return
