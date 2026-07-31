@@ -157,7 +157,7 @@ the same API. The contract is pinned by `tests/test_plugin_host.py`.
 
 ## Status
 
-**Latest release: Core v0.3.2 (2026-07-31).** See
+**Latest release: Core v0.3.3 (2026-07-31).** See
 [CHANGELOG.md](CHANGELOG.md) and the
 [GitHub releases](https://github.com/bug-factory-kft/pippal/releases).
 Use `python -m pytest` and `python -m ruff check .` for the current
