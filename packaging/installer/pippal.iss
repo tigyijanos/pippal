@@ -1,11 +1,11 @@
-; Inno Setup script for PipPal (free edition) v0.3.1
+; Inno Setup script for PipPal (free edition) v0.3.2
 ; =====================================================================
 ; Prerequisites
 ; -----
 ; 1. PyInstaller must have already produced dist\PipPal\  (onedir).
 ;    Run from the repo root:  pyinstaller --noconfirm packaging\pippal.spec
 ; 2. Compile this script:     ISCC packaging\installer\pippal.iss
-;    Output:                  dist\PipPal-Setup-0.3.1.exe
+;    Output:                  dist\PipPal-Setup-0.3.2.exe
 ;
 ; WebView2 Runtime
 ; -----
@@ -26,7 +26,7 @@
 ; =====================================================================
 
 #define MyAppName      "PipPal"
-#define MyAppVersion   "0.3.1"
+#define MyAppVersion   "0.3.2"
 #define MyAppPublisher "Bug Factory"
 #define MyAppURL       "https://pippal.bugfactory.hu"
 #define MyAppExeName   "PipPal.exe"
