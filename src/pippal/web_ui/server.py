@@ -91,43 +91,69 @@ class _Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _accepts_bridge_request(self) -> bool:
+    def _bridge_rejection_status(self) -> int | None:
         port = self.server.server_address[1]
         authority = f"127.0.0.1:{port}"
 
         hosts = self.headers.get_all("Host", [])
         if len(hosts) != 1 or hosts[0].strip(" \t") != authority:
-            self.send_error(400)
-            return False
+            return 400
 
         origins = self.headers.get_all("Origin", [])
         if len(origins) > 1 or (origins and origins[0].strip(" \t") != f"http://{authority}"):
-            self.send_error(403)
-            return False
+            return 403
         fetch_sites = self.headers.get_all("Sec-Fetch-Site", [])
         if any(value.strip().casefold() == "cross-site" for value in fetch_sites):
-            self.send_error(403)
-            return False
+            return 403
 
         content_types = self.headers.get_all("Content-Type", [])
         if len(content_types) != 1 or not _is_json_content_type(content_types[0]):
-            self.send_error(415)
-            return False
-        return True
+            return 415
+        return None
 
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/bridge":
             self.send_error(404)
             return
-        if not self._accepts_bridge_request():
+        rejection_status = self._bridge_rejection_status()
+        content_lengths = self.headers.get_all("Content-Length", [])
+        if len(content_lengths) != 1:
+            self.close_connection = True
+            self.send_error(400)
             return
-        length = int(self.headers.get("Content-Length", 0) or 0)
-        if length > 2 * 1024 * 1024:
-            self.send_error(413, "payload too large")
+        raw_length = content_lengths[0].strip(" \t")
+        if re.fullmatch(r"[0-9]+", raw_length) is None:
+            self.close_connection = True
+            self.send_error(400)
             return
         try:
-            data = json.loads(self.rfile.read(length).decode("utf-8"))
-        except Exception:
+            length = int(raw_length)
+        except ValueError:
+            self.close_connection = True
+            self.send_error(400)
+            return
+        if length > 2 * 1024 * 1024:
+            self.close_connection = True
+            self.send_error(413, "payload too large")
+            return
+        # A response followed by a close while POST bytes are still pending can
+        # surface as a Windows socket reset. Read the validated, bounded body
+        # exactly once before emitting any request-guard rejection.
+        try:
+            body = self.rfile.read(length)
+        except (OSError, ValueError):
+            self.send_error(400, "bad JSON")
+            return
+        if len(body) != length:
+            self.send_error(400, "bad JSON")
+            return
+        if rejection_status is not None:
+            self.close_connection = True
+            self.send_error(rejection_status)
+            return
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
             self.send_error(400, "bad JSON")
             return
         method = str(data.get("method", ""))
