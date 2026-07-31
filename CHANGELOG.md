@@ -1,5 +1,12 @@
 # PipPal Changelog
 
+## 0.3.2 - 2026-07-31
+
+Release date: 2026-07-31
+
+- Security: hardens the local loopback web bridge while preserving legitimate
+  same-origin browser requests and Origin-less native JSON clients.
+
 ## 0.3.1 - 2026-07-21
 
 Release date: 2026-07-21
